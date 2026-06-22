@@ -275,8 +275,52 @@ def sweep_2d(base):
     print("saved katrina_atlanta_sweep2d.png")
 
 
+def plot_absorption(base):
+    """How much does build effort u absorb the shock? Deaths, dip, and the
+    fate decomposition (displaced vs died), with the u=0 no-effort baseline."""
+    us = np.linspace(0.0, 10.0, 21)
+    rows = [metrics(*simulate({**base, "u": u}), {**base, "u": u}) for u in us]
+    g = {k: np.array([r[k] for r in rows]) for k in rows[0]}
+    base0 = g["deaths_total"][0]   # u = 0 reference
+
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4.4))
+
+    # (a) deaths vs effort, with lives-saved shading
+    ax[0].plot(us, g["deaths_total"], "o-", color="C3", label="crowding deaths")
+    ax[0].axhline(base0, color="0.6", ls="--", lw=1, label="no effort ($u=0$)")
+    ax[0].fill_between(us, g["deaths_total"], base0, color="C2", alpha=0.2,
+                       label="lives saved by effort")
+    ax[0].set_title("Deaths vs build effort")
+    ax[0].set_xlabel("Atlanta build effort  $u$")
+    ax[0].set_ylabel("cumulative crowding deaths")
+    ax[0].legend()
+
+    # (b) depth of the population dip vs effort
+    ax[1].plot(us, g["dip_depth"], "o-", color="0.4")
+    ax[1].set_title("Population dip vs build effort")
+    ax[1].set_xlabel("Atlanta build effort  $u$")
+    ax[1].set_ylabel("trough depth  $T_0 - \\min T$")
+
+    # (c) fate of the shock across severity: displaced (survived) vs died
+    ds = np.linspace(0.1, 0.9, 21)
+    rows2 = [metrics(*simulate({**base, "delta_K": d}), {**base, "delta_K": d}) for d in ds]
+    disp = np.array([r["cum_displaced"] for r in rows2])
+    died = np.array([r["deaths_total"] for r in rows2])
+    ax[2].stackplot(ds, disp, died, labels=["displaced (survived)", "died (over capacity)"],
+                    colors=["C0", "C3"], alpha=0.8)
+    ax[2].set_title("Fate of the shock vs severity")
+    ax[2].set_xlabel(r"shock severity  $\delta_K$")
+    ax[2].set_ylabel("people")
+    ax[2].legend(loc="upper left")
+
+    fig.tight_layout()
+    fig.savefig("katrina_atlanta_absorption.png", dpi=130)
+    print("saved katrina_atlanta_absorption.png")
+
+
 def main():
     plot_single(params)
+    plot_absorption(params)
     sweep_1d("u", np.linspace(0.0, 10.0, 21), params,
              "Atlanta build effort  $u$", "katrina_atlanta_sweep_u.png")
     sweep_1d("delta_K", np.linspace(0.1, 0.9, 21), params,
