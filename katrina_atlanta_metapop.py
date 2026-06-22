@@ -117,17 +117,36 @@ params = dict(
 
 
 def metrics(t, Y, p):
-    """Summary scalars used by the sweeps."""
+    """Summary scalars used by the sweeps.
+
+    Death accounting: migration conserves people, so the only thing that
+    changes the total population is the logistic term G_i = r_i N_i(1-phi_i).
+    A negative G_i (city over capacity) is net loss of people => 'deaths'.
+    """
     N_K, N_A, K_K, K_A = Y
     total = N_K + N_A
     post = t >= p["t_s"]
+    tp = t[post]
+
     flux = np.array([net_flux_KA(*Y[:, i], p) for i in range(Y.shape[1])])
+    G_K = p["r_K"] * N_K * (1 - N_K / K_K)      # net growth (births - crowding deaths)
+    G_A = p["r_A"] * N_A * (1 - N_A / K_A)
+    deaths_K = -np.trapezoid(np.clip(G_K[post], None, 0), tp)   # over-capacity loss in K
+    deaths_A = -np.trapezoid(np.clip(G_A[post], None, 0), tp)   # over-capacity loss in A
+
+    T0 = total[~post][-1]                        # pre-shock total (reference)
+    deficit = np.clip(T0 - total, 0, None)
+
     return dict(
         final_N_K=N_K[-1], final_N_A=N_A[-1],
         final_phi_K=N_K[-1] / K_K[-1], final_phi_A=N_A[-1] / K_A[-1],
         peak_flux=flux[post].max(),                 # size of the exodus wave
         min_total=total[post].min(),                # depth of the population dip
-        cum_displaced=np.trapezoid(np.clip(flux[post], 0, None), t[post]),
+        dip_depth=T0 - total[post].min(),           # net lives lost at worst moment
+        lost_person_time=np.trapezoid(deficit[post], tp),  # cumulative shortfall
+        deaths_K=deaths_K, deaths_A=deaths_A,
+        deaths_total=deaths_K + deaths_A,           # gross crowding mortality
+        cum_displaced=np.trapezoid(np.clip(flux[post], 0, None), tp),
     )
 
 
