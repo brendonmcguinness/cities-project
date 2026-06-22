@@ -23,9 +23,18 @@ Full system for t >= t_s (after the shock):
 The shock at t_s is applied as an instantaneous reset of K_K.
 """
 
+import os
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+
+# figures live in cities-project/figures/ (sibling of this src/ folder)
+FIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "figures")
+os.makedirs(FIG_DIR, exist_ok=True)
+
+
+def fig_path(name):
+    return os.path.join(FIG_DIR, name)
 
 
 # ----------------------------------------------------------------------
@@ -189,7 +198,7 @@ def plot_single(p):
             a.legend()
     fig.suptitle(f"Katrina → Atlanta  (migration_mode='{p['migration_mode']}')")
     fig.tight_layout()
-    fig.savefig("katrina_atlanta_dynamics.png", dpi=130)
+    fig.savefig(fig_path("katrina_atlanta_dynamics.png"), dpi=130)
     print("saved katrina_atlanta_dynamics.png")
 
     # --- Plot 2: the time-dependent parameters (capacities) + build effort ---
@@ -207,7 +216,7 @@ def plot_single(p):
     ax2[1].set_title(r"Atlanta build rate $\dot K_A = u(1-K_A/K_A^{max})$")
     ax2[1].set_xlabel("time"); ax2[1].set_ylabel(r"build rate  $\dot K_A$")
     fig2.tight_layout()
-    fig2.savefig("katrina_atlanta_timeparams.png", dpi=130)
+    fig2.savefig(fig_path("katrina_atlanta_timeparams.png"), dpi=130)
     print("saved katrina_atlanta_timeparams.png")
 
     print(f"pre-shock total = {total[t < ts][-1]:.3f}   final total = {total[-1]:.3f}")
@@ -245,7 +254,7 @@ def sweep_1d(key, values, base, xlabel, fname):
     for a in ax.flat:
         a.set_xlabel(xlabel)
     fig.tight_layout()
-    fig.savefig(fname, dpi=130)
+    fig.savefig(fig_path(fname), dpi=130)
     print(f"saved {fname}")
 
 
@@ -271,7 +280,7 @@ def sweep_2d(base):
     ax.set_ylabel(r"shock severity  $\delta_K$")
     ax.set_title("Chronic NOLA overcrowding vs. effort × shock")
     fig.tight_layout()
-    fig.savefig("katrina_atlanta_sweep2d.png", dpi=130)
+    fig.savefig(fig_path("katrina_atlanta_sweep2d.png"), dpi=130)
     print("saved katrina_atlanta_sweep2d.png")
 
 
@@ -314,7 +323,7 @@ def plot_absorption(base):
     ax[2].legend(loc="upper left")
 
     fig.tight_layout()
-    fig.savefig("katrina_atlanta_absorption.png", dpi=130)
+    fig.savefig(fig_path("katrina_atlanta_absorption.png"), dpi=130)
     print("saved katrina_atlanta_absorption.png")
 
 
