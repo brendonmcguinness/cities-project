@@ -76,8 +76,8 @@ def rhs(t, y, p):
     dN_A = p["r_A"] * N_A * (1 - phi_A) + F
 
     dK_K = 0.0  # New Orleans permanently lower: no recovery
-    # Atlanta builds capacity only after the shock
-    if t >= p["t_s"]:
+    # Atlanta builds capacity only after the shock, following a response delay tau
+    if t >= p["t_s"] + p.get("tau", 0.0):
         dK_A = p["u"] * (1 - K_A / p["K_A_max"])
     else:
         dK_A = 0.0
@@ -120,6 +120,7 @@ params = dict(
     K_A0=40.0,             # Atlanta baseline capacity (~4.0M people)
     K_A_max=55.0,          # Atlanta capacity ceiling with effort
     t_s=20.0,              # shock time (Katrina)
+    tau=0.0,               # response delay before Atlanta starts building
     N_K0=12.0,             # initial populations ~ baseline capacities
     N_A0=40.0,
 )
@@ -210,7 +211,7 @@ def plot_single(p):
     ax2[0].set_title("Time-dependent carrying capacities")
     ax2[0].set_xlabel("time"); ax2[0].set_ylabel("carrying capacity  $K$"); ax2[0].legend()
 
-    build = np.where(t >= ts, p["u"] * (1 - K_A / p["K_A_max"]), 0.0)
+    build = np.where(t >= ts + p.get("tau", 0.0), p["u"] * (1 - K_A / p["K_A_max"]), 0.0)
     ax2[1].plot(t, build, color="C4")
     ax2[1].axvline(ts, color="k", ls=":", lw=1)
     ax2[1].set_title(r"Atlanta build rate $\dot K_A = u(1-K_A/K_A^{max})$")
@@ -510,12 +511,74 @@ def optimize_vs_severity(base, budgets=(6.0, 12.0, 20.0), c_u=1.0, c_K=1.0):
     print("saved katrina_atlanta_opt_vs_severity.png")
 
 
+def delay_experiment(base, B=12.0, c_u=1.0, c_K=1.0):
+    """#1: how does a response delay tau (build starts at t_s + tau) change the
+    death toll and the optimal speed/amount split?"""
+    taus = np.linspace(0.0, 15.0, 16)
+
+    # deaths at the fixed baseline policy (params' u, K_A_max)
+    d_fixed = np.array([metrics(*simulate({**base, "tau": t}), {**base, "tau": t})["deaths_total"]
+                        for t in taus])
+    # optimal split under fixed budget, recomputed at each delay
+    opt = [_best_split({**base, "tau": t}, B, base["delta_K"], c_u, c_K) for t in taus]
+    d_opt = np.array([o[0] for o in opt])
+    speed_share = np.array([c_u * o[1] / B for o in opt])
+
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4.4))
+    ax[0].plot(taus, d_fixed, "o-", color="C3")
+    ax[0].set_title("Deaths vs response delay (fixed policy)")
+    ax[0].set_xlabel(r"response delay  $\tau$"); ax[0].set_ylabel("crowding deaths")
+
+    ax[1].plot(taus, d_opt, "o-", color="C2")
+    ax[1].set_title(f"Min deaths vs delay (optimal split, $B$={B:g})")
+    ax[1].set_xlabel(r"response delay  $\tau$"); ax[1].set_ylabel("min crowding deaths")
+
+    ax[2].plot(taus, speed_share, "o-", color="C0")
+    ax[2].axhline(0.5, color="0.7", lw=0.8)
+    ax[2].set_title("Optimal share of budget on SPEED")
+    ax[2].set_xlabel(r"response delay  $\tau$"); ax[2].set_ylabel("fraction of $B$ on $u$")
+    ax[2].set_ylim(0, 1)
+
+    fig.tight_layout()
+    fig.savefig(fig_path("katrina_atlanta_delay.png"), dpi=130)
+    print("saved katrina_atlanta_delay.png")
+
+
+def cost_ratio_experiment(base, B=12.0):
+    """#2: sweep the cost ratio c_K/c_u and watch the optimal split rotate."""
+    ratios = np.linspace(0.25, 4.0, 16)   # cost of amount relative to speed
+    opt = [_best_split(base, B, base["delta_K"], 1.0, r) for r in ratios]
+    speed_share = np.array([1.0 * o[1] / B for o in opt])   # $ on speed / B
+    u_star = np.array([o[1] for o in opt])
+    dK_star = np.array([o[2] for o in opt])
+
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4.4))
+    ax[0].plot(ratios, speed_share, "o-", color="C0")
+    ax[0].axhline(0.5, color="0.7", lw=0.8)
+    ax[0].axvline(1.0, color="0.7", lw=0.8, ls=":")
+    ax[0].set_title(f"Optimal share of budget on SPEED  ($B$={B:g})")
+    ax[0].set_xlabel(r"cost ratio  $c_K / c_u$  (amount vs speed)")
+    ax[0].set_ylabel("fraction of $B$ on $u$"); ax[0].set_ylim(0, 1)
+
+    ax[1].plot(ratios, u_star, "o-", color="C0", label=r"$u^\star$ (speed)")
+    ax[1].plot(ratios, dK_star, "s--", color="C1", label=r"$\Delta K^\star$ (amount)")
+    ax[1].set_title("Optimal lever values")
+    ax[1].set_xlabel(r"cost ratio  $c_K / c_u$")
+    ax[1].set_ylabel("optimal lever value"); ax[1].legend()
+
+    fig.tight_layout()
+    fig.savefig(fig_path("katrina_atlanta_costratio.png"), dpi=130)
+    print("saved katrina_atlanta_costratio.png")
+
+
 def main():
     plot_single(params)
     plot_absorption(params)
     compare_levers(params)
     optimize_investment(params)
     optimize_vs_severity(params)
+    delay_experiment(params)
+    cost_ratio_experiment(params)
     sweep_1d("u", np.linspace(0.0, 10.0, 21), params,
              "Atlanta build effort  $u$", "katrina_atlanta_sweep_u.png")
     sweep_1d("delta_K", np.linspace(0.1, 0.9, 21), params,
