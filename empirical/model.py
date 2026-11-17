@@ -37,22 +37,30 @@ def build_W(S_s, S_med, alpha, beta, gamma, struck_edges=None):
     return W
 
 
-def simulate(W, delta, rho_s, rho_h, r=None, T=4.2, t_eval=None):
-    n = N_CITIES; r = R_NAT if r is None else r
-    K_init = K0.copy(); K_init[S_IDX] *= (1 - delta)
-
+def make_rhs(W, K0_, r, s_idx, rho_s, rho_h):
+    """Right-hand side for any network (used by simulate and by the tests).
+    State y = [N (n), K (n), cumulative out of s, cumulative into s, cumulative crowding loss]."""
+    n = len(K0_)
     def rhs(t, y):
         N, K = y[:n], y[n:2 * n]
         phi = N / K
-        F = W * N[:, None] * np.maximum(phi[:, None] - phi[None, :], 0)
+        F = W * N[:, None] * np.maximum(phi[:, None] - phi[None, :], 0)   # F[i, j]: flow i -> j
         growth = r * N * (1 - phi)
         dK = rho_h * np.maximum(N - K, 0)
-        dK[S_IDX] = rho_s * (K0[S_IDX] - K[S_IDX])
+        dK[s_idx] = rho_s * (K0_[s_idx] - K[s_idx])
         return np.concatenate([growth + F.sum(0) - F.sum(1), dK,
-                               [F[S_IDX].sum(), F[:, S_IDX].sum(), np.maximum(-growth, 0).sum()]])
+                               [F[s_idx].sum(), F[:, s_idx].sum(), np.maximum(-growth, 0).sum()]])
+    return rhs
 
-    y0 = np.concatenate([K0, K_init, [0, 0, 0]])
-    return solve_ivp(rhs, (0, T), y0, t_eval=t_eval, method="LSODA", rtol=1e-6, atol=1e-9)
+
+def simulate(W, delta, rho_s, rho_h, r=None, T=4.2, t_eval=None, K0_=None, s_idx=None, rtol=1e-6, atol=1e-9):
+    K0_ = K0 if K0_ is None else np.asarray(K0_, float)
+    s_idx = S_IDX if s_idx is None else s_idx
+    r = (R_NAT if K0_ is K0 else np.zeros(len(K0_))) if r is None else np.asarray(r, float)
+    K_init = K0_.copy(); K_init[s_idx] *= (1 - delta)
+    y0 = np.concatenate([K0_, K_init, [0, 0, 0]])
+    return solve_ivp(make_rhs(W, K0_, r, s_idx, rho_s, rho_h), (0, T), y0, t_eval=t_eval,
+                     method="LSODA", rtol=rtol, atol=atol)
 
 
 def unpack(sol):
