@@ -43,5 +43,5 @@ Distances are great-circle km (the toy network in `network/` uses degrees of lon
   onward migration** between host cities, and the model's destinations equal the static gravity prediction.
 - Out of sample (empirical network for the struck city's edges): destinations R² 0.74, return origins R² 0.62, host
   domestic migration correlation 0.80 (62 metros within 900 km). The model **underestimates** Houston (14% vs 28% of
-  evacuees; 21% vs 40% of returnees), underestimates host gains by about a third, and spreads return migration too evenly
+  evacuees; 21% vs 40% of returnees), underestimates host gains by about a quarter, and spreads return migration too evenly
   over 2006–09.
