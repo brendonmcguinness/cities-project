@@ -19,3 +19,4 @@ a6c85b3fbd187f861862c40b25508371e585e33ab4ab25768b9176c29defd53c     4448418  co
 983708e1b68c8e7c4ecbef4d45137bea34ee286abe07662ccc0d6dfc6411fe83     4012355  co-est2020-alldata.csv  https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/counties/totals/co-est2020-alldata.csv
 64499985bd4a082dd3c83cc676b93b9a4f7c3667a26c06ec1be54b0716888a15        8663  HU-EST2020_6.csv  https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/housing/HU-EST2020_6.csv
 592fd19e5027658a4af44be22396561907032ec56b6fbd7ea2dc65ea9ddf4118      167168  Gaz_counties_national.zip  https://www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_counties_national.zip
+95902e4cda23f5f403e576d1bcd0e54a0f453d9b81893b080f4c15029302e348      191218  cb_2018_us_state_20m.zip  https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_state_20m.zip

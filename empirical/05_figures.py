@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 from common import OUT, LANDFALL, NOLA, nola_series
 from model import capacity_struck
 
-mpl.rcdefaults()
-plt.rcParams.update({"font.size": 10, "legend.fontsize": 8.5, "xtick.direction": "in", "ytick.direction": "in",
-                     "xtick.top": True, "ytick.right": True, "savefig.dpi": 300})
+import figstyle
+figstyle.apply()
 def letters(ax, x=-0.2):
     for a, l in zip(ax, "abcdefgh"): a.text(x, 1.02, l, transform=a.transAxes, fontsize=12, fontweight="bold", va="bottom")
 
@@ -98,14 +97,16 @@ ax[0].plot(ct["t"], ct["K"], "k:", lw=1.0, label="capacity (housing units)")
 po = CF["population_rel_trend"]["observed"]
 ax[0].plot([2019.5, 2020.5], [po["2019"], po["2020"]], "o", color="tab:red", ms=5, label="Census population")
 ax[0].plot([2018.5, 2019.5, 2020.5], [CF["housing_rel_trend"][k] for k in ("2018", "2019", "2020")], "s", mfc="none", mec="tab:gray", ms=6, label="Census housing units")
-ax[0].set_ylim(0.8, 1.02); ax[0].set_xlabel("year"); ax[0].set_ylabel("Butte County / 2014–18 trend"); ax[0].legend(frameon=False, loc="upper right", fontsize=8)
+ax[0].set_xlim(2018.25, 2021); ax[0].set_xticks([2019, 2020, 2021]); ax[0].set_ylim(0.8, 1.02); ax[0].set_xlabel("year"); ax[0].set_ylabel("Butte County / 2014–18 trend"); ax[0].legend(frameon=False, loc="upper right", fontsize=8)
 top = CF["destinations"]["top"]
 ax[1].scatter([x[2] for x in top], [x[1] for x in top], s=18, color="tab:blue")
 NAMES = {"06103": "Tehama", "06101": "Sutter", "06061": "Placer", "06089": "Shasta", "06115": "Yuba", "06067": "Sacramento",
          "06007": "Butte", "06021": "Glenn", "06113": "Yolo", "32031": "Washoe NV", "41029": "Jackson OR"}
-for x in top: ax[1].annotate(NAMES.get(x[0], x[0]), (x[2], x[1]), xytext=(4, 2), textcoords="offset points", fontsize=8)
+LOFF = {"06061": (-5, 2, "right"), "06089": (5, -7, "left"), "06101": (5, 3, "left")}
+for x in top:
+    dx, dy, ha = LOFF.get(x[0], (5, 2, "left"))
+    ax[1].annotate(NAMES.get(x[0], x[0]), (x[2], x[1]), xytext=(dx, dy), textcoords="offset points", fontsize=8, ha=ha)
 ax[1].plot([0, 0.15], [0, 0.15], "k--", lw=0.8); ax[1].set_xlabel("pre-disaster flow share (2016–18)"); ax[1].set_ylabel("share of excess out-migration 2018–19")
-ax[1].set_title(f"six largest destinations (R² over all counties = {CF['destinations']['R2_pre_disaster_shares']:.2f})", fontsize=9)
 letters(ax, -0.18); fig.tight_layout(w_pad=2.2)
 fig.savefig(OUT / "fig_campfire.png"); fig.savefig(OUT / "fig_campfire.pdf")
 print("figures written")

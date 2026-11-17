@@ -52,9 +52,8 @@ json.dump(S, open(OUT / "data_summary.json", "w"), indent=1, default=float)
 print(json.dumps({k: v for k, v in S.items() if k not in ("census_nola", "hosts", "irs_totals")}, indent=1, default=float))
 
 # ---- figure
-mpl.rcdefaults()
-plt.rcParams.update({"font.size": 10, "legend.fontsize": 8.5, "xtick.direction": "in", "ytick.direction": "in",
-                     "xtick.top": True, "ytick.right": True, "savefig.dpi": 300})
+import figstyle
+figstyle.apply()
 fig, ax = plt.subplots(2, 2, figsize=(10.5, 8)); ax = ax.ravel()
 yy = np.arange(2002, 2010); A = metros_all()
 ax[0].plot(yy, [A.loc[NOLA, f"dm{y}"] / 1e3 for y in yy], "o-", color="k", ms=4, lw=1.2, label="New Orleans")
@@ -66,7 +65,7 @@ yrs = np.array(ns["years"]) + 0.5
 ax[1].plot(np.r_[2005.5, yrs], np.r_[1, ns["hu_rel"]], "s-", color="tab:gray", ms=4, lw=1.2, label="housing units")
 ax[1].plot(np.r_[2005.5, yrs], np.r_[1, ns["pop_rel"]], "o-", color="k", ms=4, lw=1.2, label="population")
 ax[1].axvline(2005.66, color="0.6", lw=0.8, ls="--")
-ax[1].set_ylim(0.6, 1.05); ax[1].set_xlabel("year (1 July)"); ax[1].set_ylabel("New Orleans metro / 2001–05 trend"); ax[1].legend(frameon=False, loc="lower right")
+ax[1].set_xlim(2005, 2010); ax[1].set_xticks(range(2005, 2011)); ax[1].set_ylim(0.6, 1.05); ax[1].set_xlabel("year"); ax[1].set_ylabel("New Orleans metro / 2001–05 trend"); ax[1].legend(frameon=False, loc="lower right")
 order = np.argsort(cc.dist.values); dist = cc.dist.values[order]
 for (k, w), col, ls in zip(prof.items(), ["0.4", "tab:red", "tab:blue"], ["--", "-", "-"]):
     v = w.values[order]; ax[2].plot(dist, np.cumsum(v) / v.sum(), color=col, ls=ls, lw=1.4, label=k)

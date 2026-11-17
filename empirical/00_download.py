@@ -27,6 +27,7 @@ SOURCES = {
     "HU-EST2020_6.csv": CEN + "programs-surveys/popest/datasets/2010-2020/housing/HU-EST2020_6.csv",
     # Census 2010 Gazetteer (county internal points)
     "Gaz_counties_national.zip": CEN + "geo/docs/maps-data/data/gazetteer/Gaz_counties_national.zip",
+    "cb_2018_us_state_20m.zip": CEN + "geo/tiger/GENZ2018/shp/cb_2018_us_state_20m.zip",  # state outlines for the map (Fig. 1)
 }
 
 

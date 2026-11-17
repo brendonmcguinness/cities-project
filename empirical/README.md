@@ -1,7 +1,7 @@
 # Empirical calibration: Hurricane Katrina (and a second test on the 2018 Camp Fire)
 
 Everything here is rebuilt from official IRS and Census files with `bash run_all.sh` (about 15 minutes; `pip install
-numpy scipy pandas statsmodels matplotlib xlrd pytest`). See [`data/DATA.md`](data/DATA.md) for sources, how each data set
+numpy scipy pandas statsmodels matplotlib xlrd pyshp pyproj pytest`). See [`data/DATA.md`](data/DATA.md) for sources, how each data set
 maps onto the model, and limitations, and [`../MODEL_AUDIT.md`](../MODEL_AUDIT.md) for the model checks.
 
 ## Model (`model.py`)
