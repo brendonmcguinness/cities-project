@@ -1,0 +1,309 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[authoryear,round]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{authblk}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+
+% ---- drafting helpers -------------------------------------------------------
+\newcommand{\todo}[1]{{\color{red!70!black}\textbf{[TODO:} #1\textbf{]}}}
+\newcommand{\figfile}[2]{\IfFileExists{#1}{\includegraphics[width=#2]{#1}}{%
+  \fbox{\parbox[c][4cm][c]{#2}{\centering\small missing file: \texttt{\detokenize{#1}}}}}}
+% ----------------------------------------------------------------------------
+
+\title{Calibrating a metapopulation model of disaster displacement\\ across US cities with migration and housing data}
+
+\author[1]{Gregory Barber}
+\author[1]{Anna Carolina Dias de Almeida}
+\author[1]{Ella McCoshan}
+\author[1]{Brendon McGuiness}
+\author[2]{Kyuri Park}
+\affil[1]{\todo{affiliations}}
+\affil[2]{Computational Science Lab, Informatics Institute, University of Amsterdam, The Netherlands}
+\date{Draft --- \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+When a disaster destroys a city's housing, its residents move through a wider system of cities, and how badly the shock is felt depends on where they can go and how fast they can come back. We develop a metapopulation model of a networked urban system in which each metropolitan area has a population and a housing capacity, residents move down gradients in relative occupancy along a migration network, displaced residents return when the struck city has room or settle in their host, and host cities expand capacity when crowded. We calibrate every parameter of the model from public data for Hurricane Katrina: the migration network from pre-disaster county-to-county flows recorded by the Internal Revenue Service (IRS), the struck city's loss and rebuilding of capacity from Census housing-unit estimates, evacuation and return rates from Census population estimates, and host capacity response from housing growth in the cities that received evacuees. Each parameter block is fitted to one data set, and the model is validated against others. It reproduces the collapse and partial recovery of the New Orleans metropolitan area, the front-loaded timing of return migration, where returnees came from ($R^2=0.55$) and which host cities gained migrants ($r=0.79$). Tracking displaced residents is essential: a model in which any host resident can move to the struck city fits population 19 times worse and cannot reproduce where returnees came from. The data also expose failures. The model underestimates by half the concentration of evacuees and returnees in Houston; the IRS data show no onward migration from crowded host cities, removing the mechanism through which network position shaped severity in earlier versions of the model; and applied without refitting to the 2018 Camp Fire it overpredicts population loss, because displaced residents largely stayed in their county. With calibrated parameters, severity depends little on which city is struck and strongly on how fast host cities add housing, the least well constrained parameter in the data.
+\end{abstract}
+
+\noindent\textbf{Keywords:} urban systems; metapopulation; disaster displacement; migration networks; calibration; Hurricane Katrina; return migration
+
+\section{Introduction}
+
+An increasing share of the world's urban population lives in places exposed to hurricanes, floods, wildfires and sea-level rise \citep{Seto2010,Magnan2023}, and cities are increasingly tied to one another by flows of people, goods and capital \citep{Seto2012,Espey2024}. A disaster in one city is therefore not a local event. Its displaced residents move into other cities, which must house them with their own finite stock, and the cost of the disaster depends on how the whole system absorbs them and how quickly the struck city recovers.
+
+Research on disaster displacement mostly studies the struck place: who leaves, who returns and why \citep{Fussell2010,Deryugina2018}. A migration-systems literature studies how flows to and from a disaster area change \citep{Curtis2015,DeWaard2016}; after Hurricanes Katrina and Rita the migration system of the affected Gulf coast counties became more spatially concentrated while flows within it intensified \citep{Curtis2015}. Projections of climate migration route displaced people along existing migration networks \citep{Hauer2017,Robinson2020}. These studies establish that post-disaster migration follows pre-existing ties, but they do not provide a mechanistic, calibrated account of how a capacity shock propagates through a system of cities.
+
+Metapopulation models from ecology, in which patches linked by dispersal each have local dynamics \citep{Levins1969,Hanski1998}, offer such an account, and cities share the relevant structure: they are heterogeneous patches connected by flows of people, and they exhibit thresholds and abrupt shifts \citep{Grimm2008,Folke2016,Kache2022}. The difficulty is calibration: a model of this kind has many parameters, and a version that looks plausible in simulation can be wrong in ways that only data reveal. Here we take a metapopulation model of disaster displacement and calibrate every parameter from public data for Hurricane Katrina, fitting each parameter block to one data set and validating the model against others.
+
+We make four contributions. First, we formulate a model in which capacity is housing, displaced residents are tracked, return depends on the struck city's rebuilt capacity, and host cities add capacity when crowded (Section~\ref{sec:model}). Second, we document the data and their limitations, and describe the shock (Section~\ref{sec:data}). Third, we calibrate the model with an explicit protocol, quantify uncertainty and sensitivity to analyst choices, and validate it out of sample, reporting failures as well as successes (Sections~\ref{sec:calib}--\ref{sec:valid}). Fourth, we use the calibrated model to ask what determines how badly a city fares when struck, and test it without refitting on a second disaster, the 2018 Camp Fire (Sections~\ref{sec:sims}--\ref{sec:campfire}).
+
+\section{Model}\label{sec:model}
+
+Each metropolitan area $i$ has a population $N_i(t)$ and a capacity $K_i(t)$, the population its housing can accommodate; $\phi_i=N_i/K_i$ is its relative occupancy. Before the disaster every city is at capacity, $N_i(0)=K_i(0)$, so there are no flows. Population changes by local growth and migration,
+\begin{equation}
+\frac{dN_i}{dt} = r_i N_i (1-\phi_i) + \sum_{j}\left(F_{ji}-F_{ij}\right) + R_i, \qquad F_{ij}=W_{ij}\,N_i\,(\phi_i-\phi_j)_+ ,
+\label{eq:N}
+\end{equation}
+where $r_i$ is the rate of natural increase, $W$ is a directed migration network, flows run only down the occupancy gradient, and $R_i$ is return migration (below). Migration conserves people.
+
+\paragraph{The struck city.} A disaster in city $s$ at $t=0$ removes a fraction $d_0$ of its capacity, of which a fraction $d_\infty$ is lost permanently; the rest is rebuilt at rate $\rho_s$,
+\begin{equation}
+K_s(t)=K_s(0)\left[1-d_\infty-(d_0-d_\infty)e^{-\rho_s t}\right].
+\label{eq:Ks}
+\end{equation}
+The out-edges of $s$ are scaled so that $\sum_j W_{sj}=S_s$, the evacuation rate per unit occupancy gap: while $\phi_s>1$, residents leave at rate $S_s N_s(\phi_s-1)$, distributed over destinations in proportion to the network weights.
+
+\paragraph{Displaced residents and return.} Let $D_j$ be the number of people displaced from $s$ living in host $j$. They return at rate $\kappa\,(1-\phi_s)_+$ when the struck city has spare capacity, and settle permanently in their host at rate $\lambda$:
+\begin{equation}
+\frac{dD_j}{dt}=F_{sj}-\kappa(1-\phi_s)_+D_j-\lambda D_j,\qquad R_j=-\kappa(1-\phi_s)_+D_j,\quad R_s=\textstyle\sum_j \kappa(1-\phi_s)_+D_j .
+\label{eq:D}
+\end{equation}
+Return therefore comes from where evacuees went, not from host residents in general. For comparison we also fit a version without tracking, in which return is gradient-driven through in-edges of $s$ scaled to a return rate $S_{\text{ret}}$.
+
+\paragraph{Hosts.} Host cities add capacity when crowded, $dK_i/dt=\rho_h (N_i-K_i)_+$, and are coupled to one another through $W$ with scale $S_{\text{med}}$ (the median host out-degree).
+
+\paragraph{The network.} $W_{ij}$ is proportional to the observed pre-disaster IRS flow from $i$ to $j$. Where a flow is suppressed (below ten tax returns), we use the expectation from a network-wide gravity model, $w_{ij}\propto P_i^{\alpha}P_j^{\beta}d_{ij}^{-\gamma}$ with great-circle distance $d_{ij}$, capped at the suppression threshold.
+
+\paragraph{Severity.} We measure severity as excess-occupancy person-years per resident of the struck city, $\int\sum_i (N_i-K_i)_+\,dt\,/\,N_s(0)$: the number of people living above capacity, summed over the struck city and all hosts and over time. It can be observed through persons per housing unit and, unlike population lost through the growth term, does not scale with $r_i$.
+
+\paragraph{Relation to the prototype.} An earlier version of this model, developed at the Santa Fe Institute Complex Systems Summer School, used a single coupling constant normalised by the strongest edge, a fixed host build rate toward $1.3K_i$ that started at the time of the disaster whether or not hosts were crowded, distances in degrees of latitude and longitude, and no tracking of the displaced. A code audit showed that this produced population growth even without a disaster and overstated the struck city's long-run loss; the results reported here replace that version. Code, tests and the audit are in the repository (Section~\ref{sec:availability}).
+
+\section{Two regimes of severity}\label{sec:theory}
+
+Suppose growth is slow ($r\ll S_s$), the struck city does not rebuild, and hosts absorb newcomers without crowding. Then $d\phi_s/dt\approx-S_s\phi_s(\phi_s-1)$ from $\phi_s(0)=1/(1-d_0)$, and the struck city's excess occupancy integrates exactly to
+\begin{equation}
+\int_0^\infty (N_s-K_s)\,dt = \frac{K_s}{S_s}\ln\frac{1}{1-d_0},
+\label{eq:regime1}
+\end{equation}
+so severity scales as $S_s^{-1}$ (population lost through the growth term likewise integrates to $r\,d_0/S_s$ per resident). This connectivity-limited regime holds while hosts have room. If evacuation is fast relative to how quickly hosts add capacity, crowding moves to the hosts and severity is governed by $\rho_h$ rather than $S_s$. Which regime applies to a real disaster is an empirical question; Sections~\ref{sec:calib} and \ref{sec:sims} answer it for Katrina.
+
+\section{Data}\label{sec:data}
+
+\subsection{Sources}
+We combine public data from the IRS and the Census Bureau (Table~\ref{tab:data}). The IRS Statistics of Income county-to-county migration files record, for each ordered pair of counties, the number of tax returns and exemptions (approximately persons) whose filing address changed between consecutive filing years; we use filing years 2003--04 to 2007--08, about 80{,}000 county pairs per year. Census population and housing-unit estimates give each county's population and housing stock on 1 July; for metropolitan areas the Census also publishes components of change (births, deaths, net domestic and international migration) for years ending 30 June. We aggregate counties into the 366 metropolitan areas of the 2009 delineation. The model network consists of the 196 metros with at least 250{,}000 residents in 2005 or within 600~km of New Orleans; they hold 222 million people and receive 88\% of the county-identified flows out of New Orleans in 2005--06. New Orleans is the seven-parish metropolitan area. All files are downloaded and processed by scripts that record checksums and check the result against independently extracted values.
+
+\begin{table}[t]
+\centering\small
+\caption{Data sources. All files are public.}
+\label{tab:data}
+\begin{tabular}{p{3.6cm}p{2.4cm}p{2.0cm}p{6.0cm}}
+\toprule
+Data set & Unit & Period & Use\\
+\midrule
+IRS county-to-county migration & exemptions ($\approx$ persons) & filing years 2003--04 to 2007--08 & migration network; New Orleans out- and in-flows; destinations, returns, onward flows\\
+Census intercensal county estimates & persons, housing units; 1 July & 2000--2009 & capacities $K_i(0)$; struck-city capacity path; host housing response; occupancy\\
+Census metro components of change & persons per year & 2002--2009 & natural increase $r_i$; net domestic migration (validation)\\
+Census 2009 metro delineation; 2010 Gazetteer & --- & --- & aggregation; great-circle distances\\
+IRS flows and Census estimates (Vintage 2020) & as above & 2014--2021 & Camp Fire test\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These data have limitations. IRS data cover tax filers and their dependants, so households that do not file, disproportionately poor and therefore disproportionately among Katrina evacuees \citep{Fussell2010}, are missing. Flows below ten returns are suppressed: only 31--32\% of normal out-migration from New Orleans can be assigned to a destination county (71\% in 2005--06). A filing year compares addresses on returns filed in consecutive springs, so filing year 2005--06 covers roughly April 2005 to April 2006. Census estimates are model-based, and housing estimates for the struck parishes after Katrina are special estimates. Hurricane Rita struck Beaumont and Lake Charles four weeks after Katrina, and Katrina also struck the Mississippi coast; these four metros are excluded from host-side targets and validation.
+
+\subsection{The shock in the data}
+\begin{figure}[t]
+\centering
+\figfile{figures/fig1_map.png}{\textwidth}
+\caption{Where New Orleans residents went after Hurricane Katrina and where returnees came from. (a) Excess out-migration from the New Orleans metro in filing year 2005--06 (2005--06 flow minus the 2003--05 mean), by destination metro. (b) Excess in-migration to New Orleans in 2006--07, by origin metro. Circle area and line width are proportional to the number of migrants (IRS exemptions, county flows aggregated to metros; suppressed flows are not shown). Grey dots: the 196 metros of the model network.}
+\label{fig:map}
+\end{figure}
+Orleans Parish lost 53\% of its residents between July 2005 (494{,}294) and July 2006 (230{,}172). Relative to its 2001--05 trend, the population of the metropolitan area was 0.740 in July 2006, recovering to 0.774, 0.797 and 0.813 by 2009, while its housing stock was 0.727, 0.812, 0.857 and 0.871 (Fig.~\ref{fig:data}b). Housing therefore recovered faster than population: persons per housing unit were 1.7\% above trend in 2006 and 5--7\% below it from 2007 onward. Net domestic migration was $-332{,}206$ in the year to June 2006, against an average of $-6{,}944$ in 2002--05, then $+38{,}280$, $+20{,}747$ and $+14{,}906$ (Fig.~\ref{fig:data}a).
+
+In the IRS data, out-migration from the metropolitan area was about 62{,}000--64{,}000 per year before the storm and 258{,}823 in 2005--06, an excess of 195{,}793. Excess in-migration peaked a year later (32{,}755 in 2006--07, 17{,}510 in 2007--08). Evacuees went farther than normal migrants and were more concentrated (Fig.~\ref{fig:map}; Table~\ref{tab:desc}; Fig.~\ref{fig:data}c,d): 26\% of excess out-migration stayed within 300~km, against 45\% of baseline out-migration, and Houston received 28\% of the metro-bound excess, while 41\% of excess return migrants came from Houston. Host cities show the shock too. Houston's net domestic migration in the year to June 2006 was 82{,}042 above its 2002--05 average, its persons per housing unit rose 0.9\% above trend and its housing stock grew 14{,}071 units above trend by July 2006 and 32{,}579 by 2007; for Baton Rouge the figures are 29{,}459, 3.1\%, 2{,}814 and 7{,}001.
+
+\begin{table}[t]
+\centering\small
+\caption{Descriptive statistics for the New Orleans metropolitan area. Baseline = mean of 2003--04 and 2004--05. Identified flows are those assigned to a county. Concentration is computed over the 195 host metros.}
+\label{tab:desc}
+\begin{tabular}{lrrrrr}
+\toprule
+\multicolumn{6}{l}{\emph{A. IRS migration, by filing year}}\\
+& 2003--04 & 2004--05 & 2005--06 & 2006--07 & 2007--08\\
+\midrule
+Out-migration, all destinations & 61{,}718 & 64{,}343 & 258{,}823 & 71{,}891 & 62{,}511\\
+In-migration, all origins & 58{,}507 & 58{,}647 & 69{,}189 & 91{,}332 & 76{,}087\\
+Share of out-migration identified by county & 0.31 & 0.32 & 0.71 & 0.43 & 0.34\\
+\midrule
+\multicolumn{6}{l}{\emph{B. Geography of flows}}\\
+& \multicolumn{2}{r}{Baseline out} & Excess out & Return in & \\
+& \multicolumn{2}{r}{2003--05} & 2005--06 & 2006--07 & \\
+\midrule
+Share within 300 km & \multicolumn{2}{r}{0.45} & 0.26 & 0.22 & \\
+Largest metro share & \multicolumn{2}{r}{0.14 (Baton Rouge)} & 0.28 (Houston) & 0.41 (Houston) & \\
+Herfindahl index & \multicolumn{2}{r}{0.060} & 0.122 & 0.208 & \\
+\midrule
+\multicolumn{6}{l}{\emph{C. Census, New Orleans metro relative to 2001--05 trend (1 July)}}\\
+& & 2006 & 2007 & 2008 & 2009\\
+\midrule
+Population & & 0.740 & 0.774 & 0.797 & 0.813\\
+Housing units & & 0.727 & 0.812 & 0.857 & 0.871\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\figfile{figures/fig2_data.png}{0.95\textwidth}
+\caption{Hurricane Katrina in the data. (a) Net domestic migration of New Orleans and four host metros (Census, years ending 30 June). (b) Population and housing units of the New Orleans metro relative to their 2001--05 trends. (c) Cumulative share of migrants by distance from New Orleans (IRS county flows). (d) Shares of metro-bound migrants received by the ten largest destinations, baseline and storm year.}
+\label{fig:data}
+\end{figure}
+
+\section{Calibration}\label{sec:calib}
+
+\subsection{Protocol}
+Each parameter block is fitted to one data set; everything else is held out (Table~\ref{tab:calib}). Capacities $K_i(0)$ are July 2005 populations and growth rates $r_i$ are 2002--05 rates of natural increase. Stage A fits the struck city's capacity path, Eq.~\eqref{eq:Ks}, to the housing stock of the New Orleans metro in 2006--09 relative to trend. Stage B fits the evacuation, return and settling rates $(S_s,\kappa,\lambda)$ to its population in 2006--09 relative to trend and to the share of two-year excess IRS out-migration that falls in filing year 2005--06 (0.957). Stage C fits the host capacity response $\rho_h$ to the housing growth above trend in the ten metros that received most evacuees, in 2006 and 2007, converted to persons with each metro's 2005 persons per unit. Stages B and C are alternated until stable (Methods). Residual variances are estimated from each fit rather than assumed, and standard errors use the Gauss--Newton approximation on the log scale.
+
+\begin{table}[t]
+\centering\small
+\caption{Calibrated parameters, the data that determine them, and 95\% intervals (Gauss--Newton unless stated).}
+\label{tab:calib}
+\begin{tabular}{llll}
+\toprule
+Parameter & Meaning & Estimate & Determined by\\
+\midrule
+$K_i(0)$, $r_i$ & capacity, growth & population 2005; natural increase & Census\\
+$\alpha,\beta,\gamma$ & gravity fill for suppressed pairs & 1.02, 0.90, 1.12 & IRS, 38{,}220 metro pairs, 2003--05\\
+$d_0$ & capacity lost at landfall & 0.42 (jackknife SE 0.16) & Census housing units 2006--09\\
+$d_\infty$ & capacity lost permanently & 0.11 (SE 0.02) & Census housing units 2006--09\\
+$\rho_s$ & rebuilding rate & 0.76 yr$^{-1}$ (SE 0.30) & Census housing units 2006--09\\
+$S_s$ & evacuation rate & 1.62 yr$^{-1}$ (1.54--1.69) & Census population 2006--09; IRS timing\\
+$\kappa$ & return rate per unit spare capacity & 8.8 yr$^{-1}$ (6.1--12.5) & Census population 2006--09; IRS timing\\
+$\lambda$ & settling rate of the displaced & 0.50 yr$^{-1}$ (0.40--0.64) & Census population 2006--09; IRS timing\\
+$\rho_h$ & host capacity response & 1.9 yr$^{-1}$ (0.4--8.6) & host housing units 2006--07\\
+$S_{\text{med}}$ & host--host coupling & 0 & IRS onward flows (none detected)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The migration network}
+Across all 38{,}220 ordered pairs of the 196 metros, PPML \citep{SantosSilva2006} on pre-disaster flows gives $\alpha=1.02\pm0.04$, $\beta=0.90\pm0.03$ and $\gamma=1.12\pm0.03$ (cluster bootstrap over metros: 0.89--1.20, 0.77--1.07, 0.94--1.34); 38\% of pairs have a reported flow. New Orleans' own flows decay much faster with distance (Table~\ref{tab:gravity}): $\gamma=2.16\pm0.09$ at county level. A single gravity kernel is therefore a poor description of any one city's migration field, which is why the network uses observed flows and gravity only to fill suppressed pairs. As a static predictor of where evacuees went, the national gravity kernel gives $R^2=0.35$ across host metros, a New Orleans-specific kernel 0.62, and the observed pre-disaster flow shares 0.72.
+
+Displacement followed New Orleans' normal migration field. The distance exponent was $2.16\pm0.09$ for baseline out-migration and $2.07\pm0.14$ for the excess flow caused by the storm; the size exponent rose from $1.42\pm0.06$ to $1.57\pm0.15$ (county level) and from $1.41\pm0.07$ to $1.66\pm0.20$ (metro level). Evacuees were drawn more strongly to large cities, which is why they travelled farther despite an unchanged distance decay. Return migration in 2006--07 followed the same pattern.
+
+\begin{table}[t]
+\centering\small
+\caption{Gravity estimates for flows out of and into New Orleans (PPML, robust SE). County level: 683 counties (every county with a reported flow and every other county with at least 100{,}000 residents). $N$: exemptions modelled.}
+\label{tab:gravity}
+\begin{tabular}{lcccc}
+\toprule
+Flow & $\hat\beta$ (population) & $\hat\gamma$ (distance) & $N$ & pseudo-$R^2$\\
+\midrule
+Out, baseline 2003--05 & $1.42\ (0.06)$ & $2.16\ (0.09)$ & 19{,}761 & 0.79\\
+Out, 2005--06 & $1.55\ (0.13)$ & $2.08\ (0.12)$ & 183{,}052 & 0.83\\
+Excess out, 2005--06 & $1.57\ (0.15)$ & $2.07\ (0.14)$ & 163{,}292 & 0.81\\
+Out, 2006--07 & $1.56\ (0.07)$ & $2.34\ (0.11)$ & 30{,}561 & 0.82\\
+In, baseline 2003--05 & $1.40\ (0.08)$ & $2.02\ (0.09)$ & 15{,}441 & 0.77\\
+In, 2006--07 (return) & $1.78\ (0.12)$ & $2.30\ (0.12)$ & 47{,}870 & 0.86\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Host-to-host migration}
+If crowded hosts passed evacuees on, metros that received many evacuees would show excess net out-migration to other metros. Regressing each host's net excess flow to other hosts on the number of evacuees it received gives slopes of $-0.39\pm0.16$, $-0.64\pm0.20$ and $-0.61\pm0.10$ for 2005--06, 2006--07 and 2007--08. The negative sign reflects the mid-2000s migration boom in the large Sunbelt metros that also received most evacuees, so the slopes are not clean estimates; but they show no sign of onward migration. Fitting $S_{\text{med}}$ and $\rho_h$ to the destination shares leads to the same conclusion: the fit runs to $S_{\text{med}}\to0$. We therefore set $S_{\text{med}}=0$, and test 0.01 and 0.05 in the sensitivity analysis.
+
+\subsection{Fitted dynamics}
+Stage A reproduces the housing stock within 0.3 percentage points ($d_0=0.42$, $d_\infty=0.11$, $\rho_s=0.76$ per year). The initial loss is an extrapolation from the first post-storm estimate in July 2006 and is the least certain of the three (jackknife SE 0.16). Stage B gives $S_s=1.62$, $\kappa=8.8$ and $\lambda=0.50$ per year and reproduces population relative to trend within 0.35 percentage points in every year (model 0.740, 0.772, 0.800, 0.812; observed 0.740, 0.774, 0.797, 0.813) and the IRS timing share (0.958 against 0.957). Displaced residents settle with a half-life of about 1.4 years. Without tracking of the displaced, the best fit ($S_s=1.59$, $S_{\text{ret}}=0.46$) leaves a sum of squared population residuals 19 times larger (Akaike difference about 10 in favour of tracking, indicative only with four annual observations); its decisive failures are in the held-out timing and origins of return (Section~\ref{sec:valid}). Stage C gives $\rho_h=1.9$ per year with a wide interval (0.4--8.6). The fit captures only part of the host housing response: modelled host capacity growth is 78\% of the observed total in 2006 and 59\% in 2007, and correlates with it across the ten hosts at 0.45 and 0.53. Austin and San Antonio added far more housing than their evacuee inflows imply, consistent with the regional housing boom, while Baton Rouge added less than its crowding implies.
+
+\subsection{Uncertainty and sensitivity}
+Monte Carlo propagation of the stage B and C covariances gives 95\% bands for population that cover the Census estimates in all four years (Fig.~\ref{fig:calib}a). Refitting stages B and C on each leave-one-year-out fit of the housing curve shows that the initial loss and the evacuation rate are jointly identified only through the July 2006 housing estimate: dropping it raises $d_0$ to 0.63 and lowers $S_s$ to 0.67, while dropping any other year leaves $S_s$ between 1.43 and 1.74; $\lambda$ stays between 0.47 and 0.62. Eleven variants of analyst choices (network membership, baseline years, trend window, host set, host coupling) change $S_s$, $\kappa$ and $\lambda$ by less than 15\% and the validation statistics of Section~\ref{sec:valid} by at most 0.04 in $R^2$ (Table~\ref{tab:sens}). The host response $\rho_h$ is fragile, ranging from 0.6 to 2.3, mainly with the trend window. A network built from the gravity kernel alone fits population as well but predicts destinations and return origins much worse, and leaves $\rho_h$ unidentified.
+
+\begin{table}[t]
+\centering\small
+\caption{Sensitivity of calibrated parameters and validation statistics to analyst choices (11 variants of the main specification; a pure gravity network is reported separately).}
+\label{tab:sens}
+\begin{tabular}{lccc}
+\toprule
+Quantity & Main & Range over 11 variants & Gravity network\\
+\midrule
+$S_s$ (yr$^{-1}$) & 1.62 & 1.61--1.64 & 1.57\\
+$\kappa$ (yr$^{-1}$) & 8.8 & 8.7--9.8 & 9.0\\
+$\lambda$ (yr$^{-1}$) & 0.50 & 0.50--0.51 & 0.51\\
+$\rho_h$ (yr$^{-1}$) & 1.9 & 0.6--2.3 & not identified\\
+Destinations, $R^2$ & 0.70 & 0.67--0.71 & 0.35\\
+Return origins, $R^2$ & 0.55 & 0.54--0.57 & 0.25\\
+Host domestic migration, correlation & 0.79 & 0.78--0.81 & 0.84\\
+Host domestic migration, slope (data on model) & 1.55 & 1.45--1.63 & 3.89\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Validation}\label{sec:valid}
+
+We compare the calibrated model with data not used to fit it (Fig.~\ref{fig:calib}).
+
+\emph{Successes.} The model predicts the destinations of the 2005--06 excess out-migration across host metros with $R^2=0.70$, comparable to the observed pre-disaster flow shares (0.72). It predicts where the 2006--07 return migrants came from with $R^2=0.55$, against 0.32 for gradient-driven return. Its population gains of host metros in July 2006 correlate with their Census net domestic migration above the 2002--05 average at $r=0.79$ across 60 metros within 900~km. It reproduces the front-loaded return seen in the Census: net in-migration to New Orleans of 43{,}000, 38{,}000 and 16{,}000 in the years to June 2007, 2008 and 2009, against 45{,}000, 28{,}000 and 22{,}000 (gradient-driven return gives 23{,}000, 46{,}000 and 41{,}000, the wrong shape). The storm-year net migration is within 9\% (model $-353{,}000$, Census $-325{,}000$ relative to the 2002--05 mean).
+
+\emph{Failures.} The model gives Houston 13\% of evacuees and 13\% of returnees, against 28\% and 41\% observed; organised evacuation, including the sheltering of evacuees in the Houston Astrodome, likely channelled people there beyond what pre-existing migration ties predict. \todo{cite a source on the organised evacuation to Houston.} It underestimates host gains by about a third (regression slope of Census on model 1.55), partly because it excludes destinations outside the 196 metros. Return migration in the IRS data is more front-loaded than in the model (ratio of excess in-migration in 2006--07 to 2007--08: 1.87 observed, 0.72 model). Host crowding is too short-lived: Census persons per housing unit remained above trend in 2007 in most main hosts, while modelled host occupancy is back at capacity (correlation 0.52 across hosts and years).
+
+\begin{figure}[t]
+\centering
+\figfile{figures/fig3_calibration.png}{\textwidth}
+\caption{Calibration and validation. (a) New Orleans metro relative to its 2001--05 trend: Census population and housing units, capacity fitted to housing (dotted), model population with 95\% Monte Carlo band. (b) Net domestic in-migration of New Orleans in the return years (Census, relative to the 2002--05 mean) and model net flows with displaced residents tracked (band: 95\%) or gradient-driven return. (c) Observed share of 2005--06 excess out-migration received by each host metro against the model's share of host gains; the vertical column of points are metros whose flow from New Orleans was suppressed, which share a common capped weight. (d) As (c) for origins of 2006--07 excess return migration. (e) Census net domestic migration in 2005--06 above the 2002--05 mean against model population gain in July 2006 (60 metros within 900~km). (f) Census persons per housing unit above trend against model occupancy above capacity, ten main hosts, July 2006 and 2007. Panels b--f are not used in calibration. Dashed lines: $y=x$.}
+\label{fig:calib}
+\end{figure}
+
+\section{What determines severity?}\label{sec:sims}
+
+We struck each of the 196 metros in turn with the calibrated Katrina shock and rates, using the observed migration network for destinations (Fig.~\ref{fig:sims}). With a common evacuation rate, severity is almost the same whichever city is struck (0.239--0.250 excess-occupancy person-years per resident; 0.242 for New Orleans), and hosts bear half of it. Because hosts do not pass evacuees on and absorb them at a rate proportional to their crowding, the identity and position of the hosts hardly matter. If cities whose residents normally migrate more also evacuate faster (evacuation rate proportional to the pre-disaster per-capita out-migration rate, an assumption), severity falls weakly with the evacuation rate (log--log slope $-0.26$), shallower than the $-1$ of Eq.~\eqref{eq:regime1} because the hosts' share does not depend on it. Severity rises smoothly with the initial capacity loss, with no threshold, and depends strongly on host capacity response: from 1.14 to 0.15 person-years per resident as $\rho_h$ goes from 0.05 to 10 per year. Across the 95\% interval of the calibrated $\rho_h$ it varies by a factor of three to four.
+
+Two conclusions follow. First, in the calibrated model the mechanism by which network position shaped severity in the prototype, onward migration from saturated hosts, is absent, because the data show none. Second, how fast host cities add housing is both the parameter that matters most for severity and the one the data constrain least.
+
+\begin{figure}[t]
+\centering
+\figfile{figures/fig4_simulations.png}{\textwidth}
+\caption{Severity in the calibrated model. (a) Severity when each of the 196 metros is struck, against its evacuation rate, for a common rate (grey; all points coincide near New Orleans) and a rate proportional to pre-disaster out-migration intensity (blue). (b) Severity of a New Orleans shock against the capacity lost at landfall (dotted line: calibrated value), total and the part borne by hosts. (c) As (b) against host capacity response; shading: 95\% interval of the calibrated value.}
+\label{fig:sims}
+\end{figure}
+
+\section{A second disaster: the 2018 Camp Fire}\label{sec:campfire}
+
+On 8 November 2018 the Camp Fire destroyed most of Paradise, in Butte County, California. Census housing estimates for the county fell from 1.000 of trend in July 2018 to 0.856 in July 2019 and 0.858 in 2020. Using this capacity path and the evacuation, return and settling rates calibrated on Katrina, without refitting, the model predicts the county's population at 0.90 and 0.87 of trend in July 2019 and 2020 (Fig.~\ref{fig:campfire}). The Census estimates are 0.94 and 0.91. The model overpredicts the loss because many displaced residents stayed in the county: persons per housing unit rose about 10\% above trend, consistent with displaced households doubling up elsewhere in the county, whereas the model moves people out until occupancy returns to one. The model also overpredicts first-year net out-migration ($-22{,}800$ against $-13{,}000$ Census) and spreads it over a longer period than the IRS data (first-year share of two-year excess out-migration 0.63 model, 0.95 IRS). Pre-disaster flow shares predict the destinations of excess out-migration much less well than for Katrina ($R^2=0.21$ across counties; Sacramento received 4\% against an 11\% pre-disaster share, Tehama 11\% against 7\%). The Katrina rates therefore do not transfer to a smaller, county-scale disaster in which much of the displacement was absorbed locally.
+
+\begin{figure}[t]
+\centering
+\figfile{figures/fig5_campfire.png}{0.85\textwidth}
+\caption{Camp Fire test, no refitting. (a) Butte County relative to its 2014--18 trend: housing units (capacity), Census population and the model with Katrina-calibrated rates. (b) Shares of 2018--19 excess out-migration against pre-disaster flow shares for the six largest destination counties (dashed: $y=x$; $R^2=0.21$ over all 68 destination counties).}
+\label{fig:campfire}
+\end{figure}
+
+\section{Discussion}
+
+Calibrated against migration and housing data, a metapopulation model captures the timing of a city's collapse and recovery after a disaster and the broad geography of displacement and return. Two features are necessary to do so: capacity measured as housing, which separates how fast the city is rebuilt from how fast people return, and explicit tracking of the displaced, who return from where they went and settle in their hosts with a half-life of about a year and a half. Without tracking, a model fits population 19 times worse and predicts the wrong timing and origins of return.
+
+The data also overturn parts of the earlier picture. There is no evidence that crowded host cities pass evacuees on, so severity in the calibrated model hardly depends on the struck city's network position, and it rises smoothly with shock size rather than at a threshold. What matters most is how quickly host cities can add housing, and this is also what the data constrain least. Measuring host housing response better, for example from building permits and vacancy data, is the most useful next step for both science and policy. The underestimation of Houston's share is a reminder that institutional decisions, such as where evacuees are sent, shape displacement beyond migration ties, and a model for planning would need to represent them. The Camp Fire shows that rates calibrated on one disaster need not transfer to another at a different scale.
+
+\paragraph{Limitations.} IRS data miss non-filers, and the suppression of small flows leaves most normal out-migration unassigned to a destination; Census estimates are model-based. Only the July 2006 housing estimate identifies the initial loss and evacuation rate separately. We treat New Orleans as the only struck city, although Rita and Katrina struck four nearby metros. Returns depend only on spare capacity and time since displacement, not on prior tenure, race or income, which shaped who returned \citep{Fussell2010}. Host-side measures are affected by the mid-2000s migration boom. Severity as excess-occupancy person-years is observable in principle but we have not validated it against measured overcrowding beyond persons per housing unit. A single calibration event cannot establish general rates; the Camp Fire test shows that they vary.
+
+\paragraph{Extensions.} Natural next steps are a panel of US disasters with FEMA declarations, IRS flows and Census housing estimates to estimate how rates vary with event scale; local absorption within the struck area; directed flows for organised evacuation; return that depends on household characteristics; and direct measures of host housing response.
+
+\section*{Methods}
+\paragraph{Gravity estimation.} We fit $E[y]=\exp(c+\alpha\log P_o+\beta\log P_d-\gamma\log d)$ by Poisson pseudo-maximum likelihood with HC1 standard errors to all ordered pairs of the 196 metros, with $y$ the mean of 2003--04 and 2004--05 flows, and a cluster bootstrap over metros (200 replicates). For New Orleans we fit $E[y_j]=\exp(c+\beta\log P_j-\gamma\log d_j)$ over destination (or origin) counties and metros. Excess flows are flows minus the 2003--05 mean, truncated at zero.
+
+\paragraph{Calibration.} The model is integrated with LSODA (relative tolerance $10^{-6}$). Stage A is a nonlinear least-squares fit with leave-one-year-out (jackknife) standard errors. Stages B and C are weighted nonlinear least squares on log-transformed parameters, with the residual variance of each group of targets estimated from the fit (iterated once), and Gauss--Newton covariance. Stages B and C are alternated four times: $(S_s,\kappa,\lambda)$ are unchanged to three decimals after the second pass, while $\rho_h$ fluctuates between 1.90 and 1.93 because of solver tolerance, a variation about 1\% of its standard error on the log scale. Model flows are accumulated to April of each year to match IRS filing years, and to 30 June to match Census components. Host housing targets are housing units above the 2001--05 linear trend times 2005 persons per unit.
+
+\paragraph{Uncertainty and sensitivity.} Monte Carlo: 200 draws of $(S_s,\kappa,\lambda)$ from their log-scale Gauss--Newton covariance and of $\rho_h$ from its lognormal interval. Jackknife: stages B and C refitted for each leave-one-year-out stage-A fit. Sensitivity: the full pipeline rerun with metros of at least 150{,}000 or 500{,}000 residents, radii of 300 or 900~km, a single baseline year, trend windows 2002--05 and 2003--05, host sets of 5 or 20 metros, $S_{\text{med}}=0.01$ or 0.05, and a pure gravity network.
+
+\paragraph{Model checks.} Automated tests verify conservation of people, an exact steady state without a disaster, non-negativity, flow accounting for the struck city, the fitted capacity path, reduction to a two-city version, solver convergence and the analytic limit of Section~\ref{sec:theory}.
+
+\section*{Data and code availability}\label{sec:availability}
+IRS SOI migration data: \url{https://www.irs.gov/statistics/soi-tax-stats-migration-data}. Census population and housing estimates and Gazetteer files: \url{https://www2.census.gov}. Code, processed data, checksums of raw files, tests and the model audit: \url{https://github.com/KyuriP/cities-project} (folder \texttt{empirical/}; \texttt{run\_all.sh} reproduces every number and figure from the raw files).
+
+\section*{Acknowledgements}
+This work began as a group project at the Santa Fe Institute Complex Systems Summer School 2026. \todo{funding.}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
