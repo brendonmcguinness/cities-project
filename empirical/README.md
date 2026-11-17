@@ -1,47 +1,40 @@
-# Empirical calibration: Hurricane Katrina
+# Empirical calibration: Hurricane Katrina (and a second test on the 2018 Camp Fire)
 
-This folder confronts the metapopulation model with data on Hurricane Katrina (New Orleans, 29 Aug 2005). Every model
-parameter is either taken directly from data or fitted to data; see [`data/DATA.md`](data/DATA.md) for sources and how
-each data set maps onto the model.
+Everything here is rebuilt from official IRS and Census files with `bash run_all.sh` (about 15 minutes; `pip install
+numpy scipy pandas statsmodels matplotlib xlrd pytest`). See [`data/DATA.md`](data/DATA.md) for sources, how each data set
+maps onto the model, and limitations, and [`../MODEL_AUDIT.md`](../MODEL_AUDIT.md) for the model checks.
 
-## Run
+## Model (`model.py`)
 
-```bash
-pip install numpy scipy pandas statsmodels matplotlib
-cd empirical
-bash run_all.sh          # about 3 minutes; outputs go to empirical/output/
-```
+Metros are patches with population `N` and capacity `K`; residents move down occupancy gradients `phi = N/K` along a
+directed network built from observed pre-disaster IRS flows. Compared with the report model in `src/` and `network/`:
+host building is demand-driven (not on a timer), rates are per capita, the evacuation, return and host couplings are
+separate (no max-normalised `m0`), distances are great-circle, the struck city's capacity follows measured housing units,
+and **displaced residents are tracked**: they return when the struck city has room and settle in their host at a constant
+rate. The tracked-return model fits New Orleans' population 19 times better (squared error) than gradient-driven return,
+and is the only version that reproduces where returnees came from and when.
 
-| Script | What it does | Main outputs |
-|---|---|---|
-| `01_describe_data.py` | coverage and descriptive statistics, descriptive figure | `data_summary.json`, `fig_data.*` |
-| `02_gravity.py` | PPML gravity at county and metro level; joint pre-disaster fit of `alpha`, `beta`, `gamma` | `gravity.json` |
-| `03_calibrate.py` | stage 1: `delta`, `rho_s`, `S_s` from Census population and IRS timing; stage 2: `S_med`, `rho_h` from IRS destinations | `calibration.json` |
-| `04_validate.py` | out-of-sample checks: return origins (IRS), host and NOLA net domestic migration (Census) | `validation.json`, `validation_*.csv` |
-| `05_figures.py` | calibration/validation figure and county gravity figure | `fig_calibration.*`, `fig_gravity.*` |
+## Calibration protocol (`calib.py`, `03_calibrate.py`)
 
-## Model changes relative to `src/` and `network/`
+| Stage | Parameters | Fitted to | Estimate (95% CI) |
+|---|---|---|---|
+| A | capacity lost at landfall `d_0`, permanently `d_inf`, rebuild rate `rho_s` | Census housing units, NOLA metro, 2006-09 | 0.42 (jackknife SE 0.16), 0.11, 0.76/yr |
+| B | evacuation `S_s`, return `kappa`, settling `lam` | Census population 2006-09; IRS timing | 1.62/yr (1.54-1.69), 8.8/yr (6.1-12.5), 0.50/yr (0.40-0.64) |
+| C | host capacity response `rho_h` | housing units above trend in 10 main host metros, 2006-07 | 1.9/yr (0.4-8.6) |
+| — | host-host coupling `S_med` | IRS onward flows (none detected) | 0 |
+| — | network | observed 2003-05 IRS flows; gravity fill: alpha 1.02, beta 0.90, gamma 1.12 (38,220 metro pairs) | — |
 
-`model.py` keeps the report's equations (logistic growth, gradient-driven gravity flows) and changes three things the
-data required:
+## Results in brief
 
-1. **Two couplings.** Edges touching the struck city have their own scale (`S_s`, evacuation rate); other edges are scaled
-   by `S_med`. With one coupling for the whole network (the report's `m0`), any evacuation speed consistent with the data
-   makes onward migration between host cities equally fast and scatters evacuees across the country in weeks.
-2. **Rebuilding.** The struck city rebuilds, `dK_s/dt = rho_s (K_s(0) - K_s)`; return migration then emerges from the
-   occupancy gradient.
-3. **Crowding-driven host capacity.** `dK_i/dt = rho_h (N_i - K_i)_+` instead of a fixed build rate toward `1.3 K`.
-
-Distances are great-circle km (the toy network in `network/` uses degrees of longitude/latitude).
-
-## Results in brief (see `output/*.json`)
-
-- Pre-disaster gravity: `alpha = 1.32 ± 0.06`, `beta = 1.38 ± 0.07`, `gamma = 2.00 ± 0.07`.
-- Stage 1: `delta ≈ 0.28`, `rho_s ≈ 0.12 /yr`, `S_s ≈ 3.8 /yr`; NOLA population relative to trend reproduced within
-  0.6 percentage points, 2006–09.
-- Stage 2 runs to the boundary `S_med → 0`, large `rho_h`: the destination data give **no evidence for capacity-driven
-  onward migration** between host cities, and the model's destinations equal the static gravity prediction.
-- Out of sample (empirical network for the struck city's edges): destinations R² 0.74, return origins R² 0.62, host
-  domestic migration correlation 0.80 (62 metros within 900 km). The model **underestimates** Houston (14% vs 28% of
-  evacuees; 21% vs 40% of returnees), underestimates host gains by about a quarter, and spreads return migration too evenly
-  over 2006–09.
+- **Validation (not fitted):** destinations of evacuees R² 0.70; origins of returnees R² 0.55; host net domestic
+  migration correlation 0.79 (model underestimates host gains: slope 1.55); New Orleans net in-migration 2006-09
+  front-loaded as observed (model 43k, 38k, 16k; Census 45k, 28k, 22k).
+- **Failures:** Houston's share of evacuees (28%) and returnees (41%) is underestimated by half or more; IRS return timing
+  is still too slow (ratio 0.72 vs 1.87); host crowding persists longer than modelled.
+- **Robustness:** 13 analyst-choice variants change `S_s`, `kappa`, `lam` by < 15% and validation R² by < 0.04; `rho_h`
+  is fragile (0.6-2.3). A pure gravity network performs much worse (destinations R² 0.35).
+- **Simulations:** with calibrated parameters, severity (excess-occupancy person-years per resident) is nearly
+  independent of which metro is struck (0.239-0.250), scales smoothly with shock size (no threshold) and depends strongly on
+  host capacity response (1.14 to 0.15 over `rho_h` = 0.05-10/yr). Hosts bear about half of the crowding.
+- **Camp Fire (no refitting):** the Katrina rates overpredict Butte County's population loss (predicted 0.90 and 0.87 of
+  trend in 2019-20; observed 0.94 and 0.91): much of the displaced population stayed in the county, doubled up.

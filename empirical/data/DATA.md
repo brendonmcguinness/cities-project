@@ -1,38 +1,42 @@
 # Data
 
-All files are pipe-separated text with `#` comment headers that state their source and a checksum. They were extracted on
-17 Nov 2026 from the original public files listed below; the checksums were verified after extraction.
+Every processed file here is rebuilt from official raw files by `00_download.py` (raw files and SHA-256 checksums in
+`raw/MANIFEST.txt`) and `00_build_data.py`. The build checks itself against the files extracted by hand earlier
+(`legacy/`) and stops if any New Orleans flow (2004-05 to 2007-08, both directions) or metro population differs.
 
-| File | Source | Unit | Years | What it contains |
-|---|---|---|---|---|
-| `irs_nola_flows_2004_2008.psv` | IRS Statistics of Income, county-to-county migration (`county0405.zip` … `county0708.zip`, irs.gov/statistics/soi-tax-stats-migration-data) | exemptions (≈ persons) | filing years 2004–05 to 2007–08 | Flows **out of** (`oYYYY`) and **into** (`iYYYY`) the 7 parishes of the 2003 New Orleans MSA, summed over parishes, by US destination/origin county. Intra-metro flows excluded. 430 counties. |
-| `census_counties_2005.psv` | Census intercensal county estimates 2000–2010 (`co-est00int-tot.csv`); 2010 Census Gazetteer (`Gaz_counties_national.zip`) | persons; degrees | 1 July 2005 | Population and internal-point coordinates of every county with a NOLA flow, plus every other county with ≥100k residents (684 counties). |
-| `census_nola_parishes_2000_2009.psv` | Census intercensal county estimates | persons | 1 July 2000–2009 | Annual population of the 7 NOLA parishes. |
-| `cbsa_metros_2009def.psv` | Census metro delineation (`cbsa-est2009-alldata.csv`) + intercensal county estimates + Gazetteer | persons; degrees | 2001, 2004–2007 | 196 metropolitan areas (2009 delineation) with ≥250k residents in 2005 or within 600 km of New Orleans. Populations are sums of intercensal county estimates; positions are 2005-population-weighted means of county internal points. |
-| `cbsa_components_2009vintage.psv` | Census Vintage 2009 metro components of change (`cbsa-est2009-alldata.csv`) | persons per year | years ending 30 June 2002–2009 | Net domestic migration `dmYYYY`, net international migration 2006, natural-increase rate 2002–05 (births − deaths per resident) for the 196 metros. |
-| `county_to_cbsa_flowcounties.txt` | Census 2009 delineation | — | — | County → metro code for the 322 flow counties that lie in the 196 metros. |
-
-## How the data map onto the model
-
-| Model quantity | Data | Script |
+| File | Built from | Content |
 |---|---|---|
-| initial capacity `K_i(0)` | metro population, 1 July 2005 | `model.py` |
-| growth rate `r_i` | metro natural-increase rate, 2002–05 | `model.py` |
-| gravity exponents `alpha`, `beta`, `gamma` | IRS flows into and out of NOLA, 2004–05 (before the storm), joint PPML | `02_gravity.py` |
-| shock size `delta`, rebuild rate `rho_s`, evacuation rate `S_s` | Census NOLA population July 2006–09 relative to the 2001–05 trend; IRS share of 2-yr excess out-migration in filing year 2005–06 | `03_calibrate.py` |
-| host coupling `S_med`, host capacity response `rho_h` | IRS destinations of 2005–06 excess out-migration | `03_calibrate.py` |
-| validation | IRS return origins 2006–07; Census net domestic migration of hosts (2005–06) and of NOLA (2006–09) | `04_validate.py` |
+| `counties.psv` | Census intercensal county population and housing-unit estimates 2000-2010; 2010 Gazetteer | population and housing units, 1 July 2000-2009, and internal-point coordinates for every US county |
+| `metros.psv` | the above + Census Vintage 2009 metro file (2009 delineation) | 366 metros: population and housing units (sums of counties), population-weighted centroid, components of change 2001-2009 (natural increase, net domestic and international migration, years ending 30 June) |
+| `county_metro.psv` | 2009 delineation | county -> metro crosswalk |
+| `irs_county_flows.psv.gz` | IRS SOI county-to-county migration, filing years 2003-04 to 2007-08 | every county-to-county flow above the disclosure threshold (~80,000 pairs per year): returns and exemptions |
+| `irs_nola_totals.psv` | IRS summary records | New Orleans-metro total out- and in-migration including suppressed flows |
 
-## Limitations to keep in mind
+The second-event test (`08_campfire.py`) reads its raw files directly: IRS county flows 2016-17 to 2020-21 (CSV) and
+Census Vintage 2020 county population/components and California housing-unit estimates.
 
-- **IRS coverage.** IRS counts tax filers and their dependants. Households that do not file — disproportionately poor, and
-  so disproportionately among Katrina evacuees — are missing. County flows below 10 returns are suppressed: only 32% of
-  normal (2004–05) NOLA out-migration, and 71% in 2005–06, can be assigned to a destination county.
-- **IRS timing.** A filing year compares addresses on returns filed in consecutive springs, so "2005–06" covers moves
-  between roughly April 2005 and April 2006, including the evacuation (29 Aug 2005).
-- **Census estimates** are model-based (administrative records), not counts. The metro components use the Vintage 2009
-  series, which was not revised to the 2010 Census; populations use the revised intercensal series.
-- **Other struck places.** Katrina also hit the Mississippi coast (Gulfport, Pascagoula), which lost population in 2005–06;
-  the model treats New Orleans as the only struck city.
-- **Metro coverage.** The 196 metros hold 222 million people and receive 88% of the identified 2005–06 out-flows; flows
-  to smaller places are outside the model.
+## Mapping data onto the model
+
+| Model quantity | Data | Where |
+|---|---|---|
+| capacities `K_i(0)` | metro population, 1 July 2005 | `model.py` |
+| growth rates `r_i` | natural increase 2002-05 | `model.py` |
+| migration network `W` | observed pre-disaster metro-to-metro IRS flows (mean 2003-04, 2004-05); suppressed pairs filled with the network-wide gravity expectation, capped at the suppression threshold | `model.py`, `02_gravity.py` |
+| struck-city capacity path `d_0, d_inf, rho_s` | New Orleans metro housing units 2006-09 relative to 2001-05 trend | `calib.py` stage A |
+| evacuation `S_s`, return `kappa`, settling `lam` | New Orleans metro population 2006-09 relative to trend; IRS timing of excess out-migration | stage B |
+| host capacity response `rho_h` | housing units above trend in the 10 metros receiving most evacuees, 2006-07 | stage C |
+| host-host coupling `S_med = 0` | IRS host-to-host flows: no onward migration from hosts that received evacuees | `03_calibrate.py` |
+| validation | IRS destinations 2005-06, return origins and timing 2006-08; Census host domestic migration and occupancy; Camp Fire | `04_validate.py`, `08_campfire.py` |
+
+## Limitations
+
+- IRS counts tax filers and dependants only; non-filers (disproportionately poor, and so disproportionately among Katrina
+  evacuees) are missing. Flows below 10 returns are suppressed: 31-32% of normal New Orleans out-migration is assigned to a
+  county (71% in 2005-06).
+- An IRS filing year compares addresses on returns filed in consecutive springs (2005-06 covers about April 2005 to April 2006).
+- Census population and housing estimates are model-based; post-Katrina housing estimates for the struck parishes are special
+  estimates. Components of change are Vintage 2009 (not revised to the 2010 Census).
+- Hurricane Rita (Sept 2005) also struck Beaumont and Lake Charles and Katrina the Mississippi coast; these metros are
+  excluded from host-side targets and validation.
+- Excess flows and growth are measured against 2001-05 (or 2003-05) baselines; the mid-2000s Sunbelt migration boom affects
+  host-side measures (for example Phoenix appears among the largest gainers in 2005-06).

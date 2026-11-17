@@ -1,78 +1,111 @@
-"""Calibration and validation figure (output/fig_calibration.{png,pdf}) and county gravity figure (output/fig_gravity.{png,pdf})."""
+"""Figures for the paper (run after 01-08): fig_calibration, fig_simulations, fig_campfire (fig_data is made by 01)."""
 import json
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from common import OUT, counties, LANDFALL
-from model import M, S_IDX
+from common import OUT, LANDFALL, NOLA, nola_series
+from model import capacity_struck
 
 mpl.rcdefaults()
 plt.rcParams.update({"font.size": 10, "legend.fontsize": 8.5, "xtick.direction": "in", "ytick.direction": "in",
                      "xtick.top": True, "ytick.right": True, "savefig.dpi": 300})
-C = json.load(open(OUT / "calibration.json")); V = json.load(open(OUT / "validation.json"))
-tr = np.load(OUT / "traj_empirical.npz")
-ve = pd.read_csv(OUT / "validation_empirical.csv", dtype={"code": str}); vg = pd.read_csv(OUT / "validation_gravity.csv", dtype={"code": str})
-ve, vg = ve[ve.code != "35380"], vg[vg.code != "35380"]
+def letters(ax, x=-0.2):
+    for a, l in zip(ax, "abcdefgh"): a.text(x, 1.02, l, transform=a.transAxes, fontsize=12, fontweight="bold", va="bottom")
 
-fig, ax = plt.subplots(2, 3, figsize=(13, 7.6)); ax = ax.ravel()
-# a: NOLA population relative to trend
-t = tr["t"]; K0s = tr["N_s"][0]
-ax[0].plot(LANDFALL + t, tr["N_s"] / K0s, "k-", lw=1.4, label="model population")
-ax[0].plot(LANDFALL + t, tr["K_s"] / K0s, "k:", lw=1.0, label="model capacity")
-ax[0].plot([2006.5, 2007.5, 2008.5, 2009.5], C["n_obs"], "o", color="tab:red", ms=5, label="Census (1 July)")
-ax[0].set_xlim(2005, 2010); ax[0].set_ylim(0.6, 1.05); ax[0].set_xlabel("year"); ax[0].set_ylabel("NOLA metro population / 2001–05 trend")
-ax[0].legend(frameon=False, loc="lower right")
-# b: NOLA net domestic migration per Census year vs model net flow
-yrs = np.arange(2006, 2010)
-cen = [M[f"dm{y}"][S_IDX] - M.dm_base[S_IDX] for y in yrs]
-mod = []
-for y in yrs:
-    a, b = max((y - 1) + 0.5 - LANDFALL, 0), y + 0.5 - LANDFALL
-    ci, co = np.interp([a, b], t, tr["cum_in"]), np.interp([a, b], t, tr["cum_out"])
-    mod.append(((ci[1] - ci[0]) - (co[1] - co[0])) * 1e6)
-ax[1].plot(yrs, np.array(cen) / 1e3, "o-", color="tab:red", ms=5, lw=1.2, label="Census, above 2002–05 mean")
-ax[1].plot(yrs, np.array(mod) / 1e3, "s--", color="k", ms=4, lw=1.2, label="model net flow")
-ax[1].axhline(0, color="0.6", lw=0.6); ax[1].set_xticks(yrs, [f"{y-1}–{str(y)[2:]}" for y in yrs])
-ax[1].set_xlabel("year (July–June)"); ax[1].set_ylabel("NOLA net domestic migration (thousands)"); ax[1].legend(frameon=False, loc="lower right")
-ins = ax[1].inset_axes([0.42, 0.33, 0.53, 0.38])
-ins.plot(yrs[1:], np.array(cen[1:]) / 1e3, "o-", color="tab:red", ms=3, lw=1); ins.plot(yrs[1:], np.array(mod[1:]) / 1e3, "s--", color="k", ms=3, lw=1)
-ins.set_xticks(yrs[1:], [f"{str(y)[2:]}" for y in yrs[1:]], fontsize=7); ins.tick_params(labelsize=7); ins.set_ylim(0, 50); ins.set_title("return years", fontsize=7.5)
-def loglog(a, o, m, mg, xl, yl):
+C = json.load(open(OUT / "calibration.json")); V = json.load(open(OUT / "validation.json")); A = C["A"]
+U = np.load(OUT / "uncertainty_bands.npz"); ns = nola_series()
+vm = pd.read_csv(OUT / "validation_metros.csv", dtype={"code": str}); vm = vm[vm.code != NOLA]
+
+# ---------------- calibration and validation
+fig, ax = plt.subplots(2, 3, figsize=(13.5, 8)); ax = ax.ravel()
+t = U["t"]; yr = LANDFALL + t; obs_t = np.array(ns["years"]) + 0.5
+ax[0].fill_between(yr, U["pop_lo"], U["pop_hi"], color="0.8", lw=0, label="model 95% band")
+ax[0].plot(yr, U["pop_med"], "k-", lw=1.4, label="model population")
+ax[0].plot(yr, capacity_struck(t, 1.0, A["d0"], A["dinf"], A["rho_s"]), "k:", lw=1.1, label="capacity (fit to housing)")
+ax[0].plot(obs_t, ns["hu_rel"], "s", mfc="none", mec="tab:gray", ms=6, label="Census housing units")
+ax[0].plot(obs_t, ns["pop_rel"], "o", color="tab:red", ms=5, label="Census population")
+ax[0].set_xlim(2005, 2010); ax[0].set_ylim(0.5, 1.05); ax[0].set_xlabel("year"); ax[0].set_ylabel("New Orleans metro / 2001–05 trend")
+ax[0].legend(frameon=False, loc="lower right", fontsize=7.5)
+yrs = np.arange(2006, 2010); lab = [f"{y-1}–{str(y)[2:]}" for y in yrs]
+ax[1].fill_between(yrs[1:], U["dm_lo"][1:] / 1e3, U["dm_hi"][1:] / 1e3, color="0.8", lw=0)
+ax[1].plot(yrs[1:], np.array(V["tracked/empirical"]["nola_dm_obs"][1:]) / 1e3, "o-", color="tab:red", ms=5, lw=1.2, label="Census (above 2002–05 mean)")
+ax[1].plot(yrs[1:], np.array(V["tracked/empirical"]["nola_dm_model"][1:]) / 1e3, "s-", color="k", ms=4, lw=1.2, label="model, displaced tracked")
+ax[1].plot(yrs[1:], np.array(V["gradient/empirical"]["nola_dm_model"][1:]) / 1e3, "^--", color="0.5", ms=4, lw=1.0, label="model, gradient return")
+ax[1].set_xticks(yrs[1:], lab[1:]); ax[1].set_ylim(0, 60); ax[1].set_xlabel("year (July–June)"); ax[1].set_ylabel("New Orleans net domestic in-migration (thousands)")
+ax[1].legend(frameon=False, loc="upper right", fontsize=7.5)
+def loglog(a, o, m, xl, yl):
     k = o > 0
-    a.scatter(mg[k], o[k], s=10, facecolor="none", edgecolor="tab:gray", lw=0.6, label="gravity network")
-    a.scatter(m[k], o[k], s=10, color="tab:blue", lw=0, label="empirical network")
+    a.scatter(m[k], o[k], s=11, color="tab:blue", lw=0)
     a.plot([1e-5, 1], [1e-5, 1], "k--", lw=0.8); a.set_xscale("log"); a.set_yscale("log")
-    a.set_xlim(1e-5, 0.6); a.set_ylim(1e-4, 0.6); a.set_xlabel(xl); a.set_ylabel(yl); a.legend(frameon=False, loc="lower right")
-loglog(ax[2], ve.obs_dest.values, ve.mod_dest.values, vg.mod_dest.values, "model share of host gains (April 2006)", "observed share, IRS excess out 2005–06")
-loglog(ax[3], ve.obs_ret.values, ve.mod_ret.values, vg.mod_ret.values, "model share of return flow", "observed share, IRS excess in 2006–07")
-# e: host net domestic migration excess vs model gain
-nr = ve[ve.near]
+    a.set_xlim(1e-5, 0.6); a.set_ylim(1e-4, 0.6); a.set_xlabel(xl); a.set_ylabel(yl)
+    h = vm.name.str.startswith("Houston").values & k
+    a.annotate("Houston", (m[h][0], o[h][0]), xytext=(-6, 0), textcoords="offset points", ha="right", va="center", fontsize=8)
+loglog(ax[2], vm.obs_dest.values, vm.mod_dest.values, "model share of host gains (April 2006)", "observed share, IRS excess out 2005–06")
+loglog(ax[3], vm.obs_ret.values, vm.mod_ret.values, "model share of returns (2006–07)", "observed share, IRS excess in 2006–07")
+nr = vm[vm.near]
 ax[4].scatter(nr.mod_gain06 / 1e3, nr.dm_excess2006 / 1e3, s=12, color="tab:blue", lw=0)
-for nm, off, ha in [("Houston TX", (4, -2), "left"), ("Baton Rouge LA", (4, -2), "left"), ("Dallas TX", (5, -6), "left"), ("Atlanta GA", (-5, 3), "right")]:
-    r = nr[nr.name == nm].iloc[0]
-    ax[4].annotate(nm.rsplit(" ", 1)[0], (r.mod_gain06 / 1e3, r.dm_excess2006 / 1e3), xytext=off, textcoords="offset points", fontsize=8,
-                   va="top" if off[1] < 0 else "bottom", ha=ha)
+for nm, off, ha in [("Houston", (4, -2), "left"), ("Baton Rouge", (4, -2), "left"), ("Dallas", (5, -6), "left"), ("Atlanta", (-5, 3), "right")]:
+    r = nr[nr.name.str.startswith(nm)].iloc[0]
+    ax[4].annotate(nm, (r.mod_gain06 / 1e3, r.dm_excess2006 / 1e3), xytext=off, textcoords="offset points", fontsize=8, va="top" if off[1] < 0 else "bottom", ha=ha)
 lim = [-15, 90]; ax[4].plot(lim, lim, "k--", lw=0.8); ax[4].set_xlim(lim); ax[4].set_ylim(lim)
-ax[4].set_xlabel("model population gain, July 2006 (thousands)"); ax[4].set_ylabel("Census net domestic migration\n2005–06 above 2002–05 mean (thousands)")
-# f: stage-2 grid
-g = pd.DataFrame(C["grid"]); piv = g.pivot(index="rho_h", columns="S_med", values="misalloc")
-im = ax[5].imshow(piv.values, origin="lower", cmap="viridis_r", aspect="auto")
-ax[5].set_xticks(range(len(piv.columns)), [f"{x:g}" for x in piv.columns]); ax[5].set_yticks(range(len(piv.index)), [f"{x:g}" for x in piv.index])
-ax[5].set_xlabel(r"host coupling $S_{\mathrm{med}}$ (yr$^{-1}$)"); ax[5].set_ylabel(r"host capacity response $\rho_h$ (yr$^{-1}$)")
-cb = fig.colorbar(im, ax=ax[5], fraction=0.046, pad=0.03); cb.set_label("misallocated share of destinations")
-for a, l in zip(ax, "abcdef"): a.text(-0.2, 1.02, l, transform=a.transAxes, fontsize=12, fontweight="bold", va="bottom")
-fig.tight_layout(w_pad=2.0, h_pad=2.0)
+ax[4].set_xlabel("model population gain, July 2006 (thousands)"); ax[4].set_ylabel("Census net domestic migration 2005–06\nabove 2002–05 mean (thousands)")
+o5 = V["tracked/empirical"]["V5_occ"]
+for y in (2006, 2007):
+    ax[5].scatter([100 * o[f"mod{y}"] for o in o5], [100 * o[f"obs{y}"] for o in o5], marker="o" if y == 2006 else "s", s=18,
+                  label=f"July {y}", color="tab:blue" if y == 2006 else "tab:gray")
+for o in o5:
+    if o["name"].startswith(("Baton", "Houston", "Atlanta")):
+        ax[5].annotate(o["name"].split("-")[0].split(",")[0], (100 * o["mod2006"], 100 * o["obs2006"]), xytext=(4, 0), textcoords="offset points", fontsize=8, va="center")
+ax[5].plot([-1, 4], [-1, 4], "k--", lw=0.8); ax[5].set_xlim(-1, 4); ax[5].set_ylim(-1, 4)
+ax[5].set_xlabel("model host occupancy above capacity (%)"); ax[5].set_ylabel("Census persons per housing unit\nabove trend (%)"); ax[5].legend(frameon=False, loc="upper left")
+letters(ax); fig.tight_layout(w_pad=2.2, h_pad=2.2)
 fig.savefig(OUT / "fig_calibration.png"); fig.savefig(OUT / "fig_calibration.pdf")
 
-# county gravity figure (destinations of excess out-migration vs gravity kernels)
-d = counties(); d = d[d.dist > 0]; G = json.load(open(OUT / "gravity.json"))["county"]["excess"]
-obs = d.excess / d.excess.sum(); m = obs > 0
-def sh(b, gm): s = d.pop2005 ** b * d.dist ** -gm; return s / s.sum()
-fig, a = plt.subplots(figsize=(4.4, 3.9))
-a.scatter(sh(1, 1.5)[m], obs[m], s=9, facecolor="none", edgecolor="tab:gray", lw=0.6, label=r"$\beta=1,\ \gamma=1.5$ (report)")
-a.scatter(sh(G["beta"], G["gamma"])[m], obs[m], s=9, color="tab:blue", lw=0, alpha=0.8, label=rf"$\beta={G['beta']:.2f},\ \gamma={G['gamma']:.2f}$ (fitted)")
-a.plot([1e-6, 1], [1e-6, 1], "k--", lw=0.8); a.set_xscale("log"); a.set_yscale("log"); a.set_xlim(1e-6, 0.5); a.set_ylim(1e-5, 0.5)
-a.set_xlabel("predicted share"); a.set_ylabel("observed share, excess out 2005–06"); a.legend(frameon=False, loc="lower right", fontsize=8)
-fig.tight_layout(); fig.savefig(OUT / "fig_gravity.png"); fig.savefig(OUT / "fig_gravity.pdf")
+# ---------------- simulations
+S = json.load(open(OUT / "simulations.json")); sm = pd.read_csv(OUT / "simulations_metros.csv", dtype={"code": str})
+fig, ax = plt.subplots(1, 3, figsize=(13.5, 3.9))
+for scen, col in [("uniform", "0.5"), ("intensity", "tab:blue")]:
+    d = sm[sm.scenario == scen]
+    ax[0].scatter(d.S_i, d.total, s=10, color=col, lw=0, alpha=0.8, label=f"evacuation rate: {scen}")
+n = sm[(sm.scenario == "uniform") & (sm.code == NOLA)].iloc[0]
+ax[0].scatter([n.S_i], [n.total], s=40, facecolor="none", edgecolor="k", lw=1.0)
+ax[0].annotate("New Orleans", (n.S_i, n.total), xytext=(6, 6), textcoords="offset points", fontsize=8)
+ax[0].set_xscale("log"); ax[0].set_yscale("log"); ax[0].set_xlabel(r"evacuation rate of struck city $S_i$ (yr$^{-1}$)")
+for axis, ticks in [(ax[0].xaxis, [0.3, 0.5, 1, 2, 3, 5]), (ax[0].yaxis, [0.2, 0.3, 0.4])]:
+    axis.set_major_locator(mpl.ticker.FixedLocator(ticks)); axis.set_minor_formatter(mpl.ticker.NullFormatter())
+    axis.set_major_formatter(mpl.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+ax[0].set_ylabel("severity (excess-occupancy\nperson-years per resident)"); ax[0].legend(frameon=False, loc="lower left")
+dd = S["sweeps_nola"]["delta"]
+ax[1].plot([x["d0"] for x in dd], [x["total"] for x in dd], "o-", color="k", ms=4, lw=1.2, label="total")
+ax[1].plot([x["d0"] for x in dd], [x["hosts"] for x in dd], "s--", color="tab:blue", ms=4, lw=1.0, label="borne by hosts")
+ax[1].axvline(A["d0"], color="0.6", lw=0.8, ls=":"); ax[1].set_xlabel(r"capacity lost at landfall $d_0$"); ax[1].set_ylabel("severity (person-years per resident)")
+ax[1].legend(frameon=False, loc="upper left")
+rr = S["sweeps_nola"]["rho_h"]
+ax[2].axvspan(*C["C"]["ci95"], color="0.9", lw=0, label=r"95% CI of calibrated $\rho_h$")
+ax[2].plot([x["rho_h"] for x in rr], [x["total"] for x in rr], "o-", color="k", ms=4, lw=1.2, label="total")
+ax[2].plot([x["rho_h"] for x in rr], [x["hosts"] for x in rr], "s--", color="tab:blue", ms=4, lw=1.0, label="borne by hosts")
+ax[2].set_xscale("log"); ax[2].set_xlabel(r"host capacity response $\rho_h$ (yr$^{-1}$)"); ax[2].set_ylabel("severity (person-years per resident)")
+ax[2].legend(frameon=False, loc="upper right")
+letters(ax); fig.tight_layout(w_pad=2.2)
+fig.savefig(OUT / "fig_simulations.png"); fig.savefig(OUT / "fig_simulations.pdf")
+
+# ---------------- Camp Fire
+CF = json.load(open(OUT / "campfire.json")); ct = np.load(OUT / "campfire_traj.npz")
+fig, ax = plt.subplots(1, 2, figsize=(9.5, 3.8))
+ax[0].plot(ct["t"], ct["N"], "k-", lw=1.4, label="model (Katrina parameters)")
+ax[0].plot(ct["t"], ct["K"], "k:", lw=1.0, label="capacity (housing units)")
+po = CF["population_rel_trend"]["observed"]
+ax[0].plot([2019.5, 2020.5], [po["2019"], po["2020"]], "o", color="tab:red", ms=5, label="Census population")
+ax[0].plot([2018.5, 2019.5, 2020.5], [CF["housing_rel_trend"][k] for k in ("2018", "2019", "2020")], "s", mfc="none", mec="tab:gray", ms=6, label="Census housing units")
+ax[0].set_ylim(0.8, 1.02); ax[0].set_xlabel("year"); ax[0].set_ylabel("Butte County / 2014–18 trend"); ax[0].legend(frameon=False, loc="upper right", fontsize=8)
+top = CF["destinations"]["top"]
+ax[1].scatter([x[2] for x in top], [x[1] for x in top], s=18, color="tab:blue")
+NAMES = {"06103": "Tehama", "06101": "Sutter", "06061": "Placer", "06089": "Shasta", "06115": "Yuba", "06067": "Sacramento",
+         "06007": "Butte", "06021": "Glenn", "06113": "Yolo", "32031": "Washoe NV", "41029": "Jackson OR"}
+for x in top: ax[1].annotate(NAMES.get(x[0], x[0]), (x[2], x[1]), xytext=(4, 2), textcoords="offset points", fontsize=8)
+ax[1].plot([0, 0.15], [0, 0.15], "k--", lw=0.8); ax[1].set_xlabel("pre-disaster flow share (2016–18)"); ax[1].set_ylabel("share of excess out-migration 2018–19")
+ax[1].set_title(f"six largest destinations (R² over all counties = {CF['destinations']['R2_pre_disaster_shares']:.2f})", fontsize=9)
+letters(ax, -0.18); fig.tight_layout(w_pad=2.2)
+fig.savefig(OUT / "fig_campfire.png"); fig.savefig(OUT / "fig_campfire.pdf")
 print("figures written")

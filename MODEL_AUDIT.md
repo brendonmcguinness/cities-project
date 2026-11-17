@@ -29,13 +29,14 @@ building demand-driven (or tied to the disaster), making `u` relative to city si
 
 ## Calibrated model (`empirical/model.py`)
 
-All nine tests in `empirical/tests/test_model.py` pass:
+All 12 tests in `empirical/tests/test_model.py` pass (run: `cd empirical; python3 -m pytest -q tests`):
 
-- migration conserves people; no disaster ⇒ no change (exactly); populations and capacities stay positive;
-- the struck city's population change equals its cumulative in- minus out-flows;
-- with two cities and no capacity response it reproduces the original two-city code to 1e-5;
-- tightening solver tolerances 1000× changes results by < 1e-4;
-- the connectivity-limited regime matches the analytic severity `r δ / S_s` within ±50% for S_s = 1, 4, 16.
+- migration conserves people (both return mechanisms); no disaster gives exactly no change; populations, capacities and the
+  displaced stock stay non-negative and the displaced never exceed those who left;
+- the struck city's population change equals its cumulative in- minus out-flows; its capacity follows the fitted housing curve;
+- with two cities, no rebuilding and gradient return, it reproduces the original two-city code to 1e-5;
+- tightening solver tolerances 1000x changes results by < 1e-4;
+- the connectivity-limited regime matches the analytic severity `r delta / S_s` within +-50% for S_s = 1, 4, 16.
 
-**Known limitation:** host capacity added for evacuees is never removed, so total capacity ends 0.16% higher and total
-population drifts up by 0.04% over 50 years (0.00% over the 4-year calibration window).
+Known limitation: host capacity added for evacuees is never removed (it is small and slow: +0.04% total population over 50 years
+in the earlier version; the current version has the same form).

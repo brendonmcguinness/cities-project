@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+empirical/output/sensitivity/
+empirical/raw/*
+!empirical/raw/MANIFEST.txt
