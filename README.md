@@ -93,3 +93,11 @@ dict at the top of the script.
 - Under equal costs, the optimal speed/amount split is ~50/50 and is **robust to
   shock severity** — severity sets *how much* to spend and the death toll, not
   *how to split* the budget. The cost ratio is what shifts the split.
+
+## Empirical calibration (Hurricane Katrina)
+
+[`empirical/`](empirical/) calibrates a 196-metro version of the model against IRS county-to-county migration flows and
+Census population estimates for Hurricane Katrina, with every parameter taken from or fitted to data, and validates it out
+of sample (destinations, return migration, host-city domestic migration). See [`empirical/README.md`](empirical/README.md)
+and [`empirical/data/DATA.md`](empirical/data/DATA.md). Note: `network/network_metapop.py` computes distances in degrees of
+longitude/latitude; the empirical model uses great-circle kilometres.

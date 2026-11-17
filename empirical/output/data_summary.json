@@ -1,0 +1,116 @@
+{
+ "irs_n_dest_counties": {
+  "0405": 141,
+  "0506": 428,
+  "0607": 141,
+  "0708": 135
+ },
+ "irs_n_orig_counties": {
+  "0405": 141,
+  "0506": 88,
+  "0607": 203,
+  "0708": 200
+ },
+ "irs_total_out": {
+  "0405": 64343,
+  "0506": 258823,
+  "0607": 71891,
+  "0708": 62511
+ },
+ "irs_total_in": {
+  "0405": 58647,
+  "0506": 69189,
+  "0607": 91332,
+  "0708": 76087
+ },
+ "irs_identified_out": {
+  "0405": 20417,
+  "0506": 183052,
+  "0607": 30561,
+  "0708": 21420
+ },
+ "irs_identified_share_out": {
+  "0405": 0.317,
+  "0506": 0.707,
+  "0607": 0.425,
+  "0708": 0.343
+ },
+ "metro_share_of_identified_out": {
+  "0405": 0.819,
+  "0506": 0.879,
+  "0607": 0.844,
+  "0708": 0.797
+ },
+ "excess_out_0506": 194480,
+ "excess_in": {
+  "0506": 10542,
+  "0607": 32685,
+  "0708": 17440
+ },
+ "median_dist_km_baseline_0405": 521.0,
+ "share_within_300km_baseline_0405": 0.448,
+ "median_dist_km_katrina_0506": 523.0,
+ "share_within_300km_katrina_0506": 0.283,
+ "median_dist_km_excess_0506": 523.0,
+ "share_within_300km_excess_0506": 0.262,
+ "median_dist_km_return_0607": 522.0,
+ "share_within_300km_return_0607": 0.29,
+ "top_metro_baseline_0405": [
+  "Houston TX",
+  0.145
+ ],
+ "herfindahl_baseline_0405": 0.061,
+ "top_metro_excess_0506": [
+  "Houston TX",
+  0.281
+ ],
+ "herfindahl_excess_0506": 0.122,
+ "top_metro_return_0607": [
+  "Houston TX",
+  0.403
+ ],
+ "herfindahl_return_0607": 0.202,
+ "census_metro": {
+  "p2005": 1365030,
+  "p2006": 1018231,
+  "p2009": 1145611,
+  "drop": 0.254,
+  "recovered_by_2009": 0.367
+ },
+ "census_flooded4": {
+  "p2005": 1051706,
+  "p2006": 695349,
+  "p2009": 815332,
+  "drop": 0.339,
+  "recovered_by_2009": 0.337
+ },
+ "census_orleans": {
+  "p2005": 494294,
+  "p2006": 230172,
+  "p2009": 327803,
+  "drop": 0.534,
+  "recovered_by_2009": 0.37
+ },
+ "census_nola_domestic_migration": {
+  "2002": -7611,
+  "2003": -6272,
+  "2004": -5271,
+  "2005": -8623,
+  "2006": -332206,
+  "2007": 38280,
+  "2008": 20747,
+  "2009": 14906
+ },
+ "census_top_hosts_dm_excess2006": {
+  "Houston TX": 82042,
+  "Atlanta GA": 66327,
+  "Dallas TX": 65410,
+  "Phoenix AZ": 34817,
+  "Baton Rouge LA": 29459,
+  "Austin TX": 28880
+ },
+ "metros": {
+  "n": 196,
+  "pop2005": 221643811
+ }
+}
