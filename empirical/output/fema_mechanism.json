@@ -1,0 +1,95 @@
+{
+ "counties": [
+  {
+   "county": "Aransas",
+   "disaster": "Harvey",
+   "fips": "48007",
+   "registrants": 12205,
+   "displaced": 0.48619418271200326,
+   "rental_assist": 0.36935682097501027,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.1551003687013519,
+   "phis": 0.9265479433548705
+  },
+  {
+   "county": "Jefferson TX",
+   "disaster": "Harvey 2017",
+   "fips": "48245",
+   "registrants": 63978,
+   "displaced": 0.29013098252524305,
+   "rental_assist": 0.22509300071899715,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.08671730907499453,
+   "phis": 0.9736411188433309
+  },
+  {
+   "county": "Monroe FL",
+   "disaster": "Irma 2017",
+   "fips": "12087",
+   "registrants": 36084,
+   "displaced": 0.21530318146546945,
+   "rental_assist": 0.2655747699811551,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.0808114399733954,
+   "phis": 1.0591448226131537
+  },
+  {
+   "county": "Onslow NC",
+   "disaster": "Florence 2018",
+   "fips": "37133",
+   "registrants": 18581,
+   "displaced": 0.2070394488994134,
+   "rental_assist": 0.11495613799042032,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.004466928582961089,
+   "phis": 1.0654557259360793
+  },
+  {
+   "county": "Bay FL",
+   "disaster": "Michael 2018",
+   "fips": "12005",
+   "registrants": 55261,
+   "displaced": 0.43231211885416476,
+   "rental_assist": 0.268380955827799,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.034961365158068074,
+   "phis": 1.0156367527401287
+  },
+  {
+   "county": "Calcasieu LA",
+   "disaster": "Laura 2020",
+   "fips": "22019",
+   "registrants": 91561,
+   "displaced": 0.4033922740031236,
+   "rental_assist": 0.2832974738152707,
+   "rental_zip_recorded": 0,
+   "rental_zip_coverage": 0.0,
+   "local": null,
+   "tsa": 0.0,
+   "phis": 1.0728407633674957
+  }
+ ],
+ "spearman_local_phis": null,
+ "spearman_tsa_phis": {
+  "rho": -0.942857142857143,
+  "p": 0.004804664723032055
+ },
+ "spearman_rental_phis": {
+  "rho": -0.2571428571428572,
+  "p": 0.6227871720116619
+ },
+ "spearman_displaced_phis": {
+  "rho": -0.5428571428571429,
+  "p": 0.26570262390670546
+ }
+}

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+empirical/output/sensitivity/
+empirical/raw/*
+!empirical/raw/MANIFEST.txt
+empirical/output/*.pkl
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/main.pdf

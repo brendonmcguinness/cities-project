@@ -1,0 +1,256 @@
+{
+ "irs_totals": [
+  {
+   "year": "0304",
+   "nola_out_total": 61718,
+   "nola_in_total": 58507
+  },
+  {
+   "year": "0405",
+   "nola_out_total": 64343,
+   "nola_in_total": 58647
+  },
+  {
+   "year": "0506",
+   "nola_out_total": 258823,
+   "nola_in_total": 69189
+  },
+  {
+   "year": "0607",
+   "nola_out_total": 71891,
+   "nola_in_total": 91332
+  },
+  {
+   "year": "0708",
+   "nola_out_total": 62511,
+   "nola_in_total": 76087
+  }
+ ],
+ "irs_0304": {
+  "out_identified": 19104,
+  "out_counties": 148,
+  "in_identified": 15708,
+  "in_counties": 149,
+  "share_out_identified": 0.3095369260183415
+ },
+ "irs_0405": {
+  "out_identified": 20417,
+  "out_counties": 141,
+  "in_identified": 15174,
+  "in_counties": 141,
+  "share_out_identified": 0.3173150148423294
+ },
+ "irs_0506": {
+  "out_identified": 183052,
+  "out_counties": 428,
+  "in_identified": 8369,
+  "in_counties": 88,
+  "share_out_identified": 0.7072478102796119
+ },
+ "irs_0607": {
+  "out_identified": 30561,
+  "out_counties": 141,
+  "in_identified": 47870,
+  "in_counties": 203,
+  "share_out_identified": 0.42510189036179774
+ },
+ "irs_0708": {
+  "out_identified": 21420,
+  "out_counties": 135,
+  "in_identified": 33032,
+  "in_counties": 200,
+  "share_out_identified": 0.3426596918942266
+ },
+ "irs_county_pairs_per_year": {
+  "0304": 79307,
+  "0405": 81641,
+  "0506": 85300,
+  "0607": 83629,
+  "0708": 85551
+ },
+ "irs_excess_out_0506": 195792.5,
+ "irs_excess_in": {
+  "0506": 10612.0,
+  "0607": 32755.0,
+  "0708": 17510.0
+ },
+ "share_within_300km::baseline out": 0.4517851268945624,
+ "share_within_300km::excess out 2005-06": 0.26227635853672726,
+ "share_within_300km::return in 2006-07": 0.2242341092751176,
+ "concentration::baseline out": {
+  "top": "Baton Rouge, LA",
+  "top_share": 0.14177121315122676,
+  "herfindahl": 0.059738270896387835
+ },
+ "concentration::excess out 2005-06": {
+  "top": "Houston-Sugar Land-Baytown, TX",
+  "top_share": 0.28056663647739605,
+  "herfindahl": 0.12192792513661174
+ },
+ "concentration::return in 2006-07": {
+  "top": "Houston-Sugar Land-Baytown, TX",
+  "top_share": 0.4096525729269092,
+  "herfindahl": 0.2076685868263126
+ },
+ "census_nola": {
+  "pop": {
+   "2003": 1343872,
+   "2004": 1356470,
+   "2005": 1365030,
+   "2006": 1018231,
+   "2007": 1074201,
+   "2008": 1113736,
+   "2009": 1145611
+  },
+  "hu": {
+   "2003": 568073,
+   "2004": 576355,
+   "2005": 584884,
+   "2006": 430165,
+   "2007": 486098,
+   "2008": 519209,
+   "2009": 534693
+  },
+  "dm": {
+   "2002": -7611,
+   "2003": -6272,
+   "2004": -5271,
+   "2005": -8623,
+   "2006": -332206,
+   "2007": 38280,
+   "2008": 20747,
+   "2009": 14906
+  },
+  "rel_trend": {
+   "years": [
+    2006,
+    2007,
+    2008,
+    2009
+   ],
+   "t": [
+    0.8424657534246762,
+    1.8424657534246762,
+    2.8424657534246762,
+    3.8424657534246762
+   ],
+   "pop_rel": [
+    0.7397723340399793,
+    0.7744279821577529,
+    0.7967960918261209,
+    0.8133864112097456
+   ],
+   "hu_rel": [
+    0.7273884191423934,
+    0.8118286645338506,
+    0.8565605926927071,
+    0.8714855706699839
+   ],
+   "occ": [
+    1.0170251746820316,
+    0.9539303254368665,
+    0.9302273518342598,
+    0.9333331940131004
+   ]
+  }
+ },
+ "census_orleans_parish": {
+  "pop": {
+   "2005": 494294,
+   "2006": 230172,
+   "2009": 327803
+  },
+  "hu": {
+   "2005": 227110,
+   "2006": 104283,
+   "2009": 187351
+  }
+ },
+ "hosts": [
+  {
+   "code": "26420",
+   "name": "Houston-Sugar Land-Baytown, TX",
+   "irs_excess_arrivals": 40582.0,
+   "dm_excess2006": 82042.5,
+   "hu_excess2006": 14071.000000014901,
+   "hu_excess2007": 32579.80000001192,
+   "occ2006": 0.008771288351254958,
+   "occ2007": 0.0027093452412068064
+  },
+  {
+   "code": "19100",
+   "name": "Dallas-Fort Worth-Arlington, TX",
+   "irs_excess_arrivals": 18736.5,
+   "dm_excess2006": 65410.0,
+   "hu_excess2006": 9170.200000032783,
+   "hu_excess2007": 11804.200000032783,
+   "occ2006": 0.00832028848588573,
+   "occ2007": 0.013950530417344398
+  },
+  {
+   "code": "12940",
+   "name": "Baton Rouge, LA",
+   "irs_excess_arrivals": 18219.0,
+   "dm_excess2006": 29459.0,
+   "hu_excess2006": 2814.8000000026077,
+   "hu_excess2007": 7001.000000001863,
+   "occ2006": 0.031033758243903975,
+   "occ2007": 0.019195447764115414
+  },
+  {
+   "code": "12060",
+   "name": "Atlanta-Sandy Springs-Marietta, GA",
+   "irs_excess_arrivals": 12180.0,
+   "dm_excess2006": 66327.25,
+   "hu_excess2006": 5191.300000041723,
+   "hu_excess2007": 1635.400000050664,
+   "occ2006": 0.014093604870099252,
+   "occ2007": 0.024440059383333157
+  },
+  {
+   "code": "29180",
+   "name": "Lafayette, LA",
+   "irs_excess_arrivals": 3202.0,
+   "dm_excess2006": 5532.5,
+   "hu_excess2006": 905.1000000005588,
+   "hu_excess2007": 1809.800000000745,
+   "occ2006": 0.014235711793249006,
+   "occ2007": 0.005867170544290312
+  },
+  {
+   "code": "41700",
+   "name": "San Antonio, TX",
+   "irs_excess_arrivals": 3048.5,
+   "dm_excess2006": 17726.5,
+   "hu_excess2006": 10142.10000000149,
+   "hu_excess2007": 15764.80000000447,
+   "occ2006": -0.0003679931398612446,
+   "occ2007": 0.001707923559171709
+  },
+  {
+   "code": "32820",
+   "name": "Memphis, TN-MS-AR",
+   "irs_excess_arrivals": 2988.5,
+   "dm_excess2006": 6702.5,
+   "hu_excess2006": 2105.9999999981374,
+   "hu_excess2007": 2694.5999999996275,
+   "occ2006": 0.0027401434812979186,
+   "occ2007": 0.0004928378990864957
+  },
+  {
+   "code": "12420",
+   "name": "Austin-Round Rock, TX",
+   "irs_excess_arrivals": 2674.0,
+   "dm_excess2006": 28880.25,
+   "hu_excess2006": 6611.9000000059605,
+   "hu_excess2007": 15773.00000000745,
+   "occ2006": 0.013522361167034314,
+   "occ2007": 0.018458178791314506
+  }
+ ],
+ "network": {
+  "n_metros": 196,
+  "pop2005": 221643811,
+  "share_identified_out_0506_to_network": 0.8785700238183686
+ }
+}

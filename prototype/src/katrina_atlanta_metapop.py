@@ -28,7 +28,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
-# figures live in cities-project/figures/ (sibling of this src/ folder)
+# figures live in prototype/figures/ (sibling of this src/ folder)
 FIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "figures")
 os.makedirs(FIG_DIR, exist_ok=True)
 
